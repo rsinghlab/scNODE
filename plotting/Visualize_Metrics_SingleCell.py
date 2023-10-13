@@ -9,7 +9,7 @@ import scanpy
 import tabulate
 
 from plotting.__init__ import *
-from plotting.utils import _removeTopRightBorders
+from plotting import _removeTopRightBorders
 
 
 def plotTable(df_data):

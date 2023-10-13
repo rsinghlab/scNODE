@@ -1,6 +1,9 @@
 '''
 Description:
     Basic neural networks.
+
+Author:
+    Jiaqi Zhang <jiaqi_zhang2@brown.edu>
 '''
 
 import torch.nn as nn

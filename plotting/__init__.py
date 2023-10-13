@@ -1,7 +1,10 @@
 import seaborn as sbn
 import matplotlib.pyplot as plt
 import matplotlib as mpl
+from matplotlib import pyplot as plt
 
+# ========================================
+# Matplotlib settings
 params = {
     "legend.fontsize": 16,
     "legend.frameon": False,
@@ -20,6 +23,8 @@ params = {
 }
 plt.rcParams.update(params)
 
+# ========================================
+# Customized color palettes
 gray_color = (173 / 255, 181 / 255, 189 / 255)
 light_gray_color = (192 / 255, 192 / 255, 192 / 255)
 white_color = (1.0, 1.0, 1.0)
@@ -44,3 +49,29 @@ model_colors_dict = {
     "TrajectoryNet": "#92ae31",
     "dummy": gray_color,
 }
+
+# ========================================
+
+def linearSegmentCMap(num_colors, cmap_name="viridis"):
+    '''Construct colormap for linearly segmented colors.'''
+    cm = plt.get_cmap(cmap_name)
+    color_list = [cm(i//3*3.0/num_colors) for i in range(num_colors)]
+    return color_list
+
+
+def _removeTopRightBorders(ax=None):
+    '''Remove top and right borders of the figure.'''
+    if ax is None:
+        ax = plt.gca()
+    ax.spines['right'].set_visible(False)
+    ax.spines['top'].set_visible(False)
+
+
+def _removeAllBorders(ax=None):
+    '''Remove all borders of the figure.'''
+    if ax is None:
+        ax = plt.gca()
+    ax.spines['right'].set_visible(False)
+    ax.spines['left'].set_visible(False)
+    ax.spines['top'].set_visible(False)
+    ax.spines['bottom'].set_visible(False)

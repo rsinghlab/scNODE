@@ -1,140 +1,17 @@
 '''
 Description:
     Visualization.
+
+Author:
+    Jiaqi Zhang <jiaqi_zhang2@brown.edu>
 '''
 import numpy as np
-import scanpy
-from umap import UMAP
-from sklearn.decomposition import PCA
 from plotting.__init__ import *
-from plotting.utils import linearSegmentCMap
-from benchmark.BenchmarkUtils import traj2Ann, ann2traj
 
+# ======================================
 
-def plotLoss(loss_list):
-    plt.figure(figsize=(8, 6))
-    plt.subplot(3, 1, 1)
-    plt.title("Overall loss")
-    plt.plot([each[0] for each in loss_list])
-    plt.subplot(3, 1, 2)
-    plt.title("Recon loss")
-    plt.plot([each[1] for each in loss_list])
-    plt.subplot(3, 1, 3)
-    plt.title("KL loss")
-    plt.plot([each[2] for each in loss_list])
-    plt.tight_layout()
-    plt.show()
-
-
-def plotRecon(true_data, recon_data, tps):
-    n_trajs, n_tps, n_features = true_data.shape
-    plt.figure(figsize=(14, 5))
-    for t in range(n_tps):
-        plt.subplot(1, n_tps, t+1)
-        plt.title("t={:.2f}".format(tps[t]))
-        for f in range(n_features):
-            true_feature = true_data[:, t, f]
-            recon_feature = recon_data[:, t, f]
-            plt.scatter(x=true_feature, y=recon_feature, s=50, c=Vivid_10.mpl_colors[f], alpha=0.6, label=f)
-        plt.xlabel("True")
-        plt.ylabel("Est.")
-        plt.legend()
-    plt.tight_layout()
-    plt.show()
-
-
-def plotMSEPerTime(mse_per_tp, tps):
-    plt.figure(figsize=(8, 4))
-    plt.title("MSE per time point")
-    plt.plot(tps, mse_per_tp, "o-", lw=3, ms=10)
-    plt.tight_layout()
-    plt.show()
-
-
-def plotUMAPSingle(ann_data, n_pc, cell_feature, title=""):
-    print("PCA...")
-    scanpy.tl.pca(ann_data, svd_solver="arpack", n_comps=n_pc)
-    print("UMAP...")
-    scanpy.pp.neighbors(ann_data, n_neighbors=10, n_pcs=n_pc)
-    scanpy.tl.umap(ann_data, min_dist=1.0, spread=1.0)
-    scanpy.pl.umap(
-        ann_data,
-        color=cell_feature,
-        title=title
-    )
-
-
-def comparePredTrajWithTruth(pred_traj, true_traj, n_pc):
-    color_col = "time_point"
-    pred_ann = traj2Ann(pred_traj)
-    true_ann = traj2Ann(true_traj)
-
-    plt.figure(figsize=(10, 5))
-    ax1 = plt.subplot(1, 2, 1)
-    scanpy.tl.pca(true_ann, svd_solver="arpack", n_comps=n_pc)
-    scanpy.pp.neighbors(true_ann, n_neighbors=10, n_pcs=n_pc)
-    scanpy.tl.umap(true_ann, min_dist=1.0, spread=1.0)
-    scanpy.pl.umap(true_ann, color=color_col, title="True Traj", ax = ax1, show=False)
-    ax2 = plt.subplot(1, 2, 2)
-    scanpy.tl.pca(pred_ann, svd_solver="arpack", n_comps=n_pc)
-    scanpy.pp.neighbors(pred_ann, n_neighbors=10, n_pcs=n_pc)
-    scanpy.tl.umap(pred_ann, min_dist=1.0, spread=1.0)
-    scanpy.pl.umap(pred_ann, color=color_col, title="Pred Traj", ax=ax2, show=False)
-    plt.tight_layout()
-    plt.show()
-
-
-# -------
-
-def umapEmbedding(traj_data, n_pcs):
-    pca_model = PCA(n_components=50, svd_solver="arpack")
-    umap_model = UMAP(n_components=n_pcs)
-    umap_traj_data = umap_model.fit_transform(pca_model.fit_transform(traj_data))
-    return umap_traj_data, pca_model, umap_model
-
-
-def plotUMAP(true_umap_traj, pred_umap_traj):
-    plt.figure(figsize=(12, 5))
-    # Plot truth
-    plt.subplot(1, 2, 1)
-    plt.title("True Data", fontsize=15)
-    plt.scatter(true_umap_traj[:, 0], true_umap_traj[:, 1], label="true", c=BlueRed_12.mpl_colors[0], s=40, alpha=0.8)
-    # Plot predictions
-    plt.subplot(1, 2, 2)
-    plt.title("Predictions", fontsize=15)
-    plt.scatter(true_umap_traj[:, 0], true_umap_traj[:, 1], c=gray_color, s=40, alpha=0.5)
-    plt.scatter(pred_umap_traj[:, 0], pred_umap_traj[:, 1], c=BlueRed_12.mpl_colors[-1], s=40, alpha=0.8)
-    plt.legend(loc="center left", bbox_to_anchor=(1.0, 0.5))
-    plt.tight_layout()
-    plt.show()
-
-
-def plotUMAPFrame(true_umap_traj, pred_umap_traj, true_cell_tps, pred_cell_tps):
-    def _plotAll():
-        plt.scatter(true_umap_traj[:, 0], true_umap_traj[:, 1], label="other", c=gray_color, s=40, alpha=0.5)
-    # -----
-    n_tps = len(np.unique(true_cell_tps))
-    for t in range(n_tps):
-        plt.figure(figsize=(12, 5))
-        plt.suptitle("[ t={} ]".format(t))
-        true_t_idx = np.where(true_cell_tps == t)[0]
-        pred_t_idx = np.where(pred_cell_tps == t)[0]
-        # Plot truth
-        plt.subplot(1, 2, 1)
-        plt.title("True Data", fontsize=15)
-        _plotAll()
-        plt.scatter(true_umap_traj[true_t_idx, 0], true_umap_traj[true_t_idx, 1], label="true", c=BlueRed_12.mpl_colors[0], s=40, alpha=0.8)
-        # Plot predictions
-        plt.subplot(1, 2, 2)
-        plt.title("Predictions", fontsize=15)
-        _plotAll()
-        plt.scatter(pred_umap_traj[pred_t_idx, 0], pred_umap_traj[pred_t_idx, 1], label="pred", c=BlueRed_12.mpl_colors[-1], s=40, alpha=0.8)
-        # plt.legend(loc="center left", bbox_to_anchor=(1.0, 0.5))
-        plt.tight_layout()
-        plt.show()
-
-
-def plotUMAPTimePoint(true_umap_traj, pred_umap_traj, true_cell_tps, pred_cell_tps):
+def plotPredAllTime(true_umap_traj, pred_umap_traj, true_cell_tps, pred_cell_tps):
+    '''Plot predictions at all timepoints.'''
     unique_tps = np.unique(true_cell_tps).astype(int).tolist()
     n_tps = len(unique_tps)
     color_list = linearSegmentCMap(n_tps, "viridis")
@@ -142,7 +19,6 @@ def plotUMAPTimePoint(true_umap_traj, pred_umap_traj, true_cell_tps, pred_cell_t
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
     ax1.set_title("True Data", fontsize=15)
     ax2.set_title("Predictions", fontsize=15)
-    # for t in range(n_tps):
     for i, t in enumerate(unique_tps):
         true_t_idx = np.where(true_cell_tps == t)[0]
         pred_t_idx = np.where(pred_cell_tps == t)[0]
@@ -153,7 +29,8 @@ def plotUMAPTimePoint(true_umap_traj, pred_umap_traj, true_cell_tps, pred_cell_t
     plt.show()
 
 
-def plotUMAPTestTime(true_umap_traj, pred_umap_traj, true_cell_tps, pred_cell_tps, test_tps):
+def plotPredTestTime(true_umap_traj, pred_umap_traj, true_cell_tps, pred_cell_tps, test_tps):
+    '''Plot predictions at testing timepoints.'''
     n_tps = len(np.unique(true_cell_tps))
     # color_list = linearSegmentCMap(n_tps, "viridis")
     n_test_tps = len(test_tps)
@@ -174,110 +51,363 @@ def plotUMAPTestTime(true_umap_traj, pred_umap_traj, true_cell_tps, pred_cell_tp
     # plt.tight_layout()
     plt.show()
 
-
+# ======================================
+#TODO: save path
 def compareUMAPTestTime(
-        true_umap_traj, vae_pred_umap_traj, prescient_pred_umap_traj,
-        true_cell_tps, vae_pred_cell_tps, prescient_pred_cell_tps, test_tps):
-    n_tps = len(np.unique(true_cell_tps))
-    color_list = linearSegmentCMap(n_tps, "viridis")
-    fig, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(13, 5))
-    ax1.set_title("True Data", fontsize=15)
-    ax2.set_title("PRESCIENT Predictions", fontsize=15)
-    ax3.set_title("Our Predictions", fontsize=15)
-    ax1.scatter(true_umap_traj[:, 0], true_umap_traj[:, 1], label="other", c=gray_color, s=40, alpha=0.5)
-    ax2.scatter(true_umap_traj[:, 0], true_umap_traj[:, 1], label="other", c=gray_color, s=40, alpha=0.5)
-    ax3.scatter(true_umap_traj[:, 0], true_umap_traj[:, 1], label="other", c=gray_color, s=40, alpha=0.5)
-    for t in test_tps:
-        c = color_list[int(t)]
-        true_t_idx = np.where(true_cell_tps == t)[0]
-        vae_pred_t_idx = np.where(vae_pred_cell_tps == t)[0]
-        prescient_pred_t_idx = np.where(prescient_pred_cell_tps == t)[0]
-        ax1.scatter(true_umap_traj[true_t_idx, 0], true_umap_traj[true_t_idx, 1], label=int(t), color=c, s=20, alpha=1.0)
-        ax2.scatter(prescient_pred_umap_traj[prescient_pred_t_idx, 0], prescient_pred_umap_traj[prescient_pred_t_idx, 1], label=int(t), color=c, s=20, alpha=1.0)
-        ax3.scatter(vae_pred_umap_traj[vae_pred_t_idx, 0], vae_pred_umap_traj[vae_pred_t_idx, 1], label=int(t), color=c, s=20, alpha=1.0)
-    ax3.legend(loc="center left", bbox_to_anchor=(1.0, 0.5))
-    # plt.tight_layout()
-    plt.show()
-
-
-def compareUMAPTestTime2(
-        true_umap_traj, vae_pred_umap_traj, prescient_pred_umap_traj, sde_pred_umap_traj,
-        true_cell_tps, vae_pred_cell_tps, prescient_pred_cell_tps, sde_pred_cell_tps, test_tps):
-    n_tps = len(np.unique(true_cell_tps))
-    color_list = linearSegmentCMap(n_tps, "viridis")
-    fig, (ax1, ax2, ax3, ax4) = plt.subplots(1, 4, figsize=(15, 5))
-    ax1.set_title("True Data", fontsize=15)
-    ax2.set_title("PRESCIENT Predictions", fontsize=15)
-    ax3.set_title("ODE Predictions", fontsize=15)
-    # ax4.set_title("SDE Predictions", fontsize=15)
-    ax4.set_title("Compact Loss Predictions", fontsize=15)
-
-    ax1.scatter(true_umap_traj[:, 0], true_umap_traj[:, 1], label="other", c=gray_color, s=40, alpha=0.5)
-    ax2.scatter(true_umap_traj[:, 0], true_umap_traj[:, 1], label="other", c=gray_color, s=40, alpha=0.5)
-    ax3.scatter(true_umap_traj[:, 0], true_umap_traj[:, 1], label="other", c=gray_color, s=40, alpha=0.5)
-    ax4.scatter(true_umap_traj[:, 0], true_umap_traj[:, 1], label="other", c=gray_color, s=40, alpha=0.5)
-    for t in test_tps:
-        c = color_list[int(t)]
-        true_t_idx = np.where(true_cell_tps == t)[0]
-        vae_pred_t_idx = np.where(vae_pred_cell_tps == t)[0]
-        sde_pred_t_idx = np.where(sde_pred_cell_tps == t)[0]
-        prescient_pred_t_idx = np.where(prescient_pred_cell_tps == t)[0]
-        ax1.scatter(true_umap_traj[true_t_idx, 0], true_umap_traj[true_t_idx, 1], label=int(t), color=c, s=20, alpha=1.0)
-        ax2.scatter(prescient_pred_umap_traj[prescient_pred_t_idx, 0], prescient_pred_umap_traj[prescient_pred_t_idx, 1], label=int(t), color=c, s=20, alpha=1.0)
-        ax3.scatter(vae_pred_umap_traj[vae_pred_t_idx, 0], vae_pred_umap_traj[vae_pred_t_idx, 1], label=int(t), color=c, s=20, alpha=1.0)
-        ax4.scatter(sde_pred_umap_traj[sde_pred_t_idx, 0], sde_pred_umap_traj[sde_pred_t_idx, 1], label=int(t), color=c, s=20, alpha=1.0)
-    ax4.legend(loc="center left", bbox_to_anchor=(1.0, 0.5))
-    # plt.tight_layout()
-    plt.show()
-
-
-# -----
-
-def plotBasicStats(
-        true_cell_avg, true_cell_var, true_gene_avg, true_gene_var,
-        pred_cell_avg, pred_cell_var, pred_gene_avg, pred_gene_var
+        true_umap_traj, model_pred_umap_traj, true_cell_tps, model_cell_tps, test_tps,
+        model_list, mdoel_name_dict, data_name, split_type, embed_name, save_dir
 ):
-    plt.figure(figsize=(12, 4))
-    plt.subplot(1, 4, 1)
-    plt.title("Cell Avg.")
-    # plt.boxplot([true_cell_avg, pred_cell_avg], positions=[0, 1])
-    sbn.stripplot(data=[true_cell_avg, pred_cell_avg], jitter=True)
-    plt.xticks([0, 1], ["true", "pred"])
-    plt.subplot(1, 4, 2)
-    plt.title("Cell Var.")
-    # plt.boxplot([true_cell_var, pred_cell_var], positions=[0, 1])
-    sbn.stripplot(data=[true_cell_var, pred_cell_var], jitter=True)
-    plt.xticks([0, 1], ["true", "pred"])
-    plt.subplot(1, 4, 3)
-    plt.title("Gene Avg.")
-    # plt.boxplot([true_gene_avg, pred_gene_avg], positions=[0, 1])
-    sbn.stripplot(data=[true_gene_avg, pred_gene_avg], jitter=True)
-    plt.xticks([0, 1], ["true", "pred"])
-    plt.subplot(1, 4, 4)
-    plt.title("Gene Var.")
-    # plt.boxplot([true_gene_var, pred_gene_var], positions=[0, 1])
-    sbn.stripplot(data=[true_gene_var, pred_gene_var], jitter=True)
-    plt.xticks([0, 1], ["true", "pred"])
+    n_tps = len(np.unique(true_cell_tps))
+    n_models = len(model_list)
+    color_list = Vivid_10.mpl_colors
+    fig, ax_list = plt.subplots(1, n_models+1, figsize=(14, 4))
+    # Plot true data
+    ax_list[0].set_title("True Data", fontsize=15)
+    ax_list[0].scatter(true_umap_traj[:, 0], true_umap_traj[:, 1], c=gray_color, s=40, alpha=0.5)
+    for t_idx, t in enumerate(test_tps):
+        c = color_list[t_idx]
+        true_t_idx = np.where(true_cell_tps == t)[0]
+        ax_list[0].scatter(
+            true_umap_traj[true_t_idx, 0], true_umap_traj[true_t_idx, 1],
+            label=int(t), color=c, s=20, alpha=0.9
+        )
+    ax_list[0].set_xticks([])
+    ax_list[0].set_yticks([])
+    _removeAllBorders(ax_list[0])
+    # Plot pred data
+    for m_idx, m in enumerate(model_list):
+        # ax_list[m_idx+1].set_title("{} \n miLISI={:.2f}".format(mdoel_name_dict[m], miLISI), fontsize=15)
+        ax_list[m_idx+1].set_title(mdoel_name_dict[m], fontsize=15)
+        ax_list[m_idx+1].scatter(true_umap_traj[:, 0], true_umap_traj[:, 1], c=gray_color, s=40, alpha=0.5)
+        for t_idx, t in enumerate(test_tps):
+            c = color_list[t_idx]
+            pred_t_idx = np.where(model_cell_tps[m_idx] == t)[0]
+            ax_list[m_idx+1].scatter(
+                model_pred_umap_traj[m_idx][pred_t_idx, 0], model_pred_umap_traj[m_idx][pred_t_idx, 1],
+                label=int(t), color=c, s=20, alpha=0.9)
+        ax_list[m_idx+1].set_xticks([])
+        ax_list[m_idx+1].set_yticks([])
+        _removeAllBorders(ax_list[m_idx+1])
+    ax_list[-1].legend(loc="center left", bbox_to_anchor=(1.0, 0.5), title="Test TPs", title_fontsize=14, fontsize=13)
     plt.tight_layout()
+    plt.savefig("../res/figs/{}-{}-{}.pdf".format(data_name, split_type, embed_name))
+    plt.savefig("../res/figs/{}-{}-{}.png".format(data_name, split_type, embed_name))
     plt.show()
 
 
-# -----
+def plotMetricBarVer(dataset_list, inter_model_list, extra_model_list, dataset_name_dict, mdoel_name_dict, save_dir):
+    inter_avg_ot = []
+    inter_std_ot = []
+    inter_avg_l2 = []
+    inter_std_l2 = []
+    extra_avg_ot = []
+    extra_std_ot = []
+    extra_avg_l2 = []
+    extra_std_l2 = []
+    for data_name in dataset_list:
+        # interpolation
+        if data_name in ["embryoid", "pancreatic"]:
+            inter_split = "one_interpolation"
+        if data_name in ["zebrafish", "mammalian", "drosophila", "WOT"]:
+            inter_split = "three_interpolation"
+        metric_res = np.load("../res/comparison/{}-{}-model_metrics.npy".format(data_name, inter_split), allow_pickle=True).item()
+        tmp_ot = np.asarray([[metric_res[t][m]["global"]["ot"] if m in metric_res[t] else np.nan for m in inter_model_list] for t in metric_res])
+        tmp_l2 = np.asarray([[metric_res[t][m]["global"]["l2"] if m in metric_res[t] else np.nan for m in inter_model_list] for t in metric_res])
+        inter_avg_ot.append(np.nanmean(tmp_ot, axis=0))
+        inter_std_ot.append(np.nanstd(tmp_ot, axis=0))
+        inter_avg_l2.append(np.nanmean(tmp_l2, axis=0))
+        inter_std_l2.append(np.nanstd(tmp_l2, axis=0))
+        # extrapolation
+        if data_name in ["embryoid", "pancreatic"]:
+            extra_split = "one_forecasting"
+        if data_name in ["mammalian", "drosophila", "WOT"]:
+            extra_split = "three_forecasting"
+        if data_name in ["zebrafish"]:
+            extra_split = "two_forecasting"
+        metric_res = np.load("../res/comparison/{}-{}-model_metrics.npy".format(data_name, extra_split), allow_pickle=True).item()
+        tmp_ot = np.asarray([[metric_res[t][m]["global"]["ot"] if m in metric_res[t] else np.nan for m in extra_model_list] for t in metric_res])
+        tmp_l2 = np.asarray([[metric_res[t][m]["global"]["l2"] if m in metric_res[t] else np.nan for m in extra_model_list] for t in metric_res])
+        extra_avg_ot.append(np.nanmean(tmp_ot, axis=0))
+        extra_std_ot.append(np.nanmean(tmp_ot, axis=0))
+        extra_avg_l2.append(np.nanmean(tmp_l2, axis=0))
+        extra_std_l2.append(np.nanstd(tmp_l2, axis=0))
+    # -----
+    inter_avg_ot = np.asarray(inter_avg_ot)
+    extra_avg_ot = np.asarray(extra_avg_ot)
+    color_list = Vivid_10.mpl_colors
+    fig, ax_list = plt.subplots(2, 1, figsize=(8, 8.5))
+    inter_width = 0.1
+    x_base = np.arange(len(dataset_list)) - inter_width*len(inter_model_list)
+    ax_list[0].set_title("Interpolation")
+    for i in range(len(inter_model_list)):
+        ax_list[0].bar(
+            x=x_base+i*inter_width,
+            height=inter_avg_ot[:, i],
+            width=inter_width,
+            align="edge",
+            color=model_colors_dict[inter_model_list[i]],
+            label=mdoel_name_dict[inter_model_list[i]],
+            edgecolor="k",
+            linewidth=0.2,
+        )
+        # ax_list[0].legend(fontsize=12)
+    ax_list[0].set_ylim(0.0, 600)
+    ax_list[0].set_yticks([0, 200, 400, 600])
+    ax_list[0].set_yticklabels(["0", "200", "400", r"$\geq$600"])
+    ax_list[0].set_xticks([])
+    ax_list[0].set_ylabel("Wasserstein")
+    _removeTopRightBorders(ax_list[0])
+    extra_width = 0.2
+    x_base = np.arange(len(dataset_list)) - extra_width * len(extra_model_list)
+    ax_list[1].set_title("Extrapolation")
+    for i in range(len(extra_model_list)):
+        ax_list[1].bar(
+            x=x_base + i * extra_width,
+            height=extra_avg_ot[:, i],
+            width=extra_width,
+            align="edge",
+            color=model_colors_dict[extra_model_list[i]],
+            label=mdoel_name_dict[extra_model_list[i]],
+            edgecolor="k",
+            linewidth=0.2,
+        )
+        # ax_list[1].legend(fontsize=12)
+    ax_list[1].set_ylim(0.0, 800)
+    ax_list[1].set_yticks([0, 200, 400, 600, 800])
+    ax_list[1].set_yticklabels(["0", "200", "400", "600", r"$\geq$800"])
+    ax_list[1].set_ylabel("Wasserstein")
+    _removeTopRightBorders(ax_list[1])
+    plt.xticks(np.arange(len(dataset_list)) - extra_width*len(extra_model_list)/2, [dataset_name_dict[x] for x in dataset_list])
+    plt.xlabel("Dataset")
+    # ax_list[0].legend(loc="upper left", bbox_to_anchor=(0.0, 1.1), title_fontsize=14, fontsize=10, ncol=3)
+    ax_list[0].legend(loc="center left", bbox_to_anchor=(1.0, 0.5), fontsize=11)
+    plt.subplots_adjust(hspace=2.5)
+    plt.tight_layout()
+    plt.savefig("../res/figs/exp_metric_bar.pdf")
+    plt.show()
+    # -----
+    inter_avg_l2 = np.asarray(inter_avg_l2)
+    extra_avg_l2 = np.asarray(extra_avg_l2)
+    color_list = Vivid_10.mpl_colors
+    fig, ax_list = plt.subplots(1, 2, figsize=(12, 4))
+    inter_width = 0.1
+    x_base = np.arange(len(dataset_list)) - inter_width*len(inter_model_list)
+    ax_list[0].set_title("Interpolation")
+    for i in range(len(inter_model_list)):
+        bar1 = ax_list[0].bar(
+            x=x_base+i*inter_width,
+            height=inter_avg_l2[:, i],
+            width=inter_width,
+            align="edge",
+            color=model_colors_dict[inter_model_list[i]],
+            label=mdoel_name_dict[inter_model_list[i]],
+            edgecolor="k",
+            linewidth=0.2,
+        )
+        # ax_list[0].legend(fontsize=12)
+    ax_list[0].set_ylim(0.0, 50)
+    ax_list[0].set_yticks([0, 20, 40, 50])
+    ax_list[0].set_yticklabels(["0", "20", "40", r"$\geq$50"])
+    ax_list[0].set_xticks([])
+    ax_list[0].set_ylabel("L2")
+    ax_list[0].set_xlabel("Dataset")
+    _removeTopRightBorders(ax_list[0])
+    ax_list[0].set_xticks(np.arange(len(dataset_list)) - inter_width * len(inter_model_list) / 2)
+    ax_list[0].set_xticklabels([dataset_name_dict[x] for x in dataset_list])
+    plt.xlabel("Dataset")
+    extra_width = 0.2
+    x_base = np.arange(len(dataset_list)) - extra_width * len(extra_model_list)
+    ax_list[1].set_title("Extrapolation")
+    for i in range(len(extra_model_list)):
+        bar2 = ax_list[1].bar(
+            x=x_base + i * extra_width,
+            height=extra_avg_l2[:, i],
+            width=extra_width,
+            align="edge",
+            color=model_colors_dict[extra_model_list[i]],
+            label=mdoel_name_dict[extra_model_list[i]],
+            edgecolor="k",
+            linewidth=0.2,
+        )
+        # ax_list[1].legend(fontsize=12)
+    # ax_list[1].set_ylim(0.0, 800)
+    # ax_list[1].set_yticks([0, 200, 400, 600, 800])
+    # ax_list[1].set_yticklabels(["0", "200", "400", "600", r"$\geq$800"])
+    # ax_list[1].set_ylabel("Wasserstein")
+    _removeTopRightBorders(ax_list[1])
+    plt.xticks(np.arange(len(dataset_list)) - extra_width*len(extra_model_list)/2, [dataset_name_dict[x] for x in dataset_list])
+    plt.xlabel("Dataset")
+    # ax_list[0].legend(loc="upper left", bbox_to_anchor=(0.0, 1.1), title_fontsize=14, fontsize=10, ncol=3)
+    # ax_list[0].legend([mdoel_name_dict[x] for x in inter_model_list], loc="center left", bbox_to_anchor=(-0.0, 0.5), fontsize=11)
 
-def umapWithPCA(traj_data, n_neighbors, min_dist, pca_pcs):
-    pca_model = PCA(n_components=pca_pcs, svd_solver="arpack")
-    umap_model = UMAP(n_components=2, n_neighbors=n_neighbors, min_dist=min_dist)
-    umap_traj_data = umap_model.fit_transform(pca_model.fit_transform(traj_data))
-    return umap_traj_data, umap_model, pca_model
+    # fig.add_axes([0.0, 1.0, 1.0, 0.2])
+    handles, labels = ax_list[0].get_legend_handles_labels()
+    fig.legend(handles, labels, loc=(0.25, 1), fontsize=12, ncol=5)
+
+    plt.subplots_adjust(hspace=2.5)
+    plt.tight_layout()
+    plt.savefig("../res/figs/exp_l2_bar.pdf")
+    plt.show()
+
+    # # -----
+    # fig = plt.figure(figsize=(12, 2))
+    # fig.legend(handles, labels, loc=(0.25, 0.5), fontsize=12, ncol=5)
+    # plt.savefig("../res/figs/exp_model_legend.pdf")
+    # plt.show()
 
 
-def umapWithoutPCA(traj_data, n_neighbors, min_dist):
-    umap_model = UMAP(n_components=2, n_neighbors=n_neighbors, min_dist=min_dist)
-    umap_traj_data = umap_model.fit_transform(traj_data)
-    return umap_traj_data, umap_model
+def plotMetricBarHor(dataset_list, inter_model_list, extra_model_list, dataset_name_dict, mdoel_name_dict, save_dir):
+    inter_avg_ot = []
+    inter_std_ot = []
+    inter_avg_l2 = []
+    inter_std_l2 = []
+    extra_avg_ot = []
+    extra_std_ot = []
+    extra_avg_l2 = []
+    extra_std_l2 = []
+    for data_name in dataset_list:
+        # interpolation
+        if data_name in ["embryoid", "pancreatic"]:
+            inter_split = "one_interpolation"
+        if data_name in ["zebrafish", "mammalian", "drosophila", "WOT"]:
+            inter_split = "three_interpolation"
+        metric_res = np.load("../res/comparison/{}-{}-model_metrics.npy".format(data_name, inter_split), allow_pickle=True).item()
+        tmp_ot = np.asarray([[metric_res[t][m]["global"]["ot"] if m in metric_res[t] else np.nan for m in inter_model_list] for t in metric_res])
+        tmp_l2 = np.asarray([[metric_res[t][m]["global"]["l2"] if m in metric_res[t] else np.nan for m in inter_model_list] for t in metric_res])
+        inter_avg_ot.append(np.nanmean(tmp_ot, axis=0))
+        inter_std_ot.append(np.nanstd(tmp_ot, axis=0))
+        inter_avg_l2.append(np.nanmean(tmp_l2, axis=0))
+        inter_std_l2.append(np.nanstd(tmp_l2, axis=0))
+        # extrapolation
+        if data_name in ["embryoid", "pancreatic"]:
+            extra_split = "one_forecasting"
+        if data_name in ["mammalian", "drosophila", "WOT"]:
+            extra_split = "three_forecasting"
+        if data_name in ["zebrafish"]:
+            extra_split = "two_forecasting"
+        metric_res = np.load("../res/comparison/{}-{}-model_metrics.npy".format(data_name, extra_split), allow_pickle=True).item()
+        tmp_ot = np.asarray([[metric_res[t][m]["global"]["ot"] if m in metric_res[t] else np.nan for m in extra_model_list] for t in metric_res])
+        tmp_l2 = np.asarray([[metric_res[t][m]["global"]["l2"] if m in metric_res[t] else np.nan for m in extra_model_list] for t in metric_res])
+        extra_avg_ot.append(np.nanmean(tmp_ot, axis=0))
+        extra_std_ot.append(np.nanmean(tmp_ot, axis=0))
+        extra_avg_l2.append(np.nanmean(tmp_l2, axis=0))
+        extra_std_l2.append(np.nanstd(tmp_l2, axis=0))
+    # -----
+    inter_avg_ot = np.asarray(inter_avg_ot)
+    extra_avg_ot = np.asarray(extra_avg_ot)
+    color_list = Vivid_10.mpl_colors
+    fig, ax_list = plt.subplots(1, 2, figsize=(12, 4))
+    inter_width = 0.1
+    x_base = np.arange(len(dataset_list)) - inter_width*len(inter_model_list)
+    ax_list[0].set_title("Interpolation")
+    for i in range(len(inter_model_list)):
+        ax_list[0].bar(
+            x=x_base+i*inter_width,
+            height=inter_avg_ot[:, i],
+            width=inter_width,
+            align="edge",
+            color=model_colors_dict[inter_model_list[i]],
+            label=mdoel_name_dict[inter_model_list[i]],
+            edgecolor="k",
+            linewidth=0.2,
+        )
+        # ax_list[0].legend(fontsize=12)
+    ax_list[0].set_ylim(0.0, 600)
+    ax_list[0].set_yticks([0, 200, 400, 600])
+    ax_list[0].set_yticklabels(["0", "200", "400", r"$\geq$600"])
+    ax_list[0].set_xticks([])
+    ax_list[0].set_ylabel("Wasserstein")
+    ax_list[0].set_xlabel("Dataset")
+    ax_list[0].set_xticks(np.arange(len(dataset_list)) - inter_width * len(inter_model_list) / 2)
+    ax_list[0].set_xticklabels([dataset_name_dict[x] for x in dataset_list])
+    _removeTopRightBorders(ax_list[0])
+    extra_width = 0.2
+    x_base = np.arange(len(dataset_list)) - extra_width * len(extra_model_list)
+    ax_list[1].set_title("Extrapolation")
+    for i in range(len(extra_model_list)):
+        ax_list[1].bar(
+            x=x_base + i * extra_width,
+            height=extra_avg_ot[:, i],
+            width=extra_width,
+            align="edge",
+            color=model_colors_dict[extra_model_list[i]],
+            label=mdoel_name_dict[extra_model_list[i]],
+            edgecolor="k",
+            linewidth=0.2,
+        )
+        # ax_list[1].legend(fontsize=12)
+    ax_list[1].set_ylim(0.0, 800)
+    ax_list[1].set_yticks([0, 200, 400, 600, 800])
+    ax_list[1].set_yticklabels(["0", "200", "400", "600", r"$\geq$800"])
+    # ax_list[1].set_ylabel("Wasserstein")
+    _removeTopRightBorders(ax_list[1])
+    plt.xticks(np.arange(len(dataset_list)) - extra_width*len(extra_model_list)/2, [dataset_name_dict[x] for x in dataset_list])
+    plt.xlabel("Dataset")
+    # ax_list[0].legend(loc="upper left", bbox_to_anchor=(0.0, 1.1), title_fontsize=14, fontsize=10, ncol=3)
+    # ax_list[0].legend(loc="center left", bbox_to_anchor=(1.0, 0.5), fontsize=11)
+    plt.subplots_adjust(hspace=2.5)
+    plt.tight_layout()
+    plt.savefig("../res/figs/exp_metric_bar_hori.pdf")
+    plt.show()
+    # -----
+    inter_avg_l2 = np.asarray(inter_avg_l2)
+    extra_avg_l2 = np.asarray(extra_avg_l2)
+    color_list = Vivid_10.mpl_colors
+    fig, ax_list = plt.subplots(1, 2, figsize=(12, 4))
+    inter_width = 0.1
+    x_base = np.arange(len(dataset_list)) - inter_width*len(inter_model_list)
+    ax_list[0].set_title("Interpolation")
+    for i in range(len(inter_model_list)):
+        bar1 = ax_list[0].bar(
+            x=x_base+i*inter_width,
+            height=inter_avg_l2[:, i],
+            width=inter_width,
+            align="edge",
+            color=model_colors_dict[inter_model_list[i]],
+            label=mdoel_name_dict[inter_model_list[i]],
+            edgecolor="k",
+            linewidth=0.2,
+        )
+        # ax_list[0].legend(fontsize=12)
+    ax_list[0].set_ylim(0.0, 50)
+    ax_list[0].set_yticks([0, 20, 40, 50])
+    ax_list[0].set_yticklabels(["0", "20", "40", r"$\geq$50"])
+    ax_list[0].set_xticks([])
+    ax_list[0].set_ylabel("L2")
+    ax_list[0].set_xlabel("Dataset")
+    _removeTopRightBorders(ax_list[0])
+    ax_list[0].set_xticks(np.arange(len(dataset_list)) - inter_width * len(inter_model_list) / 2)
+    ax_list[0].set_xticklabels([dataset_name_dict[x] for x in dataset_list])
+    plt.xlabel("Dataset")
+    extra_width = 0.2
+    x_base = np.arange(len(dataset_list)) - extra_width * len(extra_model_list)
+    ax_list[1].set_title("Extrapolation")
+    for i in range(len(extra_model_list)):
+        bar2 = ax_list[1].bar(
+            x=x_base + i * extra_width,
+            height=extra_avg_l2[:, i],
+            width=extra_width,
+            align="edge",
+            color=model_colors_dict[extra_model_list[i]],
+            label=mdoel_name_dict[extra_model_list[i]],
+            edgecolor="k",
+            linewidth=0.2,
+        )
+        # ax_list[1].legend(fontsize=12)
+    ax_list[1].set_ylim(0.0, 50)
+    ax_list[1].set_yticks([0, 20, 40, 50])
+    ax_list[1].set_yticklabels(["0", "20", "40", r"$\geq$50"])
+    _removeTopRightBorders(ax_list[1])
+    plt.xticks(np.arange(len(dataset_list)) - extra_width*len(extra_model_list)/2, [dataset_name_dict[x] for x in dataset_list])
+    plt.xlabel("Dataset")
+    # ax_list[0].legend(loc="upper left", bbox_to_anchor=(0.0, 1.1), title_fontsize=14, fontsize=10, ncol=3)
+    # ax_list[0].legend([mdoel_name_dict[x] for x in inter_model_list], loc="center left", bbox_to_anchor=(-0.0, 0.5), fontsize=11)
 
+    # fig.add_axes([0.0, 1.0, 1.0, 0.2])
+    handles, labels = ax_list[0].get_legend_handles_labels()
+    fig.legend(handles, labels, loc=(0.25, 1), fontsize=12, ncol=5)
 
-def onlyPCA(traj_data, pca_pcs):
-    pca_model = PCA(n_components=pca_pcs, svd_solver="arpack")
-    pca_traj_data = pca_model.fit_transform(traj_data)
-    return pca_traj_data, pca_model
+    plt.subplots_adjust(hspace=2.5)
+    plt.tight_layout()
+    plt.savefig("../res/figs/exp_l2_bar_hori.pdf")
+    plt.show()

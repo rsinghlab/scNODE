@@ -20,11 +20,11 @@ import seaborn as sbn
 from scipy.optimize import minimize
 
 from benchmark.BenchmarkUtils import loadSCData, tpSplitInd, tunedOurPars
-from plotting.visualization import plotUMAP, plotUMAPTimePoint, plotUMAPTestTime, umapWithoutPCA, umapWithPCA
+from plotting.visualization import plotUMAP, plotPredAllTime, plotPredTestTime, umapWithoutPCA, umapWithPCA
 from data.preprocessing import splitBySpec
 from benchmark.Compare_SingleCell_Predictions import basicStats, globalEvaluation
-from optim.running import constructLatentODEModel, latentODETrainWithPreTrain
-from plotting.utils import linearSegmentCMap, _removeAllBorders
+from optim.running import constructscNODEModel, scNODETrainWithPreTrain
+from plotting import linearSegmentCMap, _removeAllBorders
 from plotting.__init__ import *
 import matplotlib.patheffects as pe
 
@@ -54,7 +54,7 @@ dec_latent_list = [50]
 act_name = "relu"
 def loadModel(data_name, split_type):
     dict_filename = "../res/downstream_analysis/vector_field/{}-{}-latent_ODE_OT_pretrain-state_dict.pt".format(data_name,split_type)
-    latent_ode_model = constructLatentODEModel(
+    latent_ode_model = constructscNODEModel(
         n_genes, latent_dim=latent_dim,
         enc_latent_list=enc_latent_list, dec_latent_list=dec_latent_list, drift_latent_size=drift_latent_size,
         latent_enc_act="none", latent_dec_act=act_name, drift_act=act_name,

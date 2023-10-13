@@ -1,3 +1,10 @@
+'''
+Description:
+    Utility functions for benchmarking.
+
+Author:
+    Jiaqi Zhang <jiaqi_zhang2@brown.edu>
+'''
 import numpy as np
 import scanpy
 import pandas as pd
@@ -7,17 +14,8 @@ import torch.distributions as dist
 from optim.evaluation import _ot
 
 
-def loadPseudoTraj(filename):
-    traj_dict = np.load(filename, allow_pickle=True).item()
-    tensor_shape = traj_dict["traj_shape"]
-    tensor_idx = traj_dict["traj_idx"]
-    tensor_value = traj_dict["traj_data"]
-    traj_data = np.zeros(tensor_shape)
-    for i, x in enumerate(tensor_idx):
-        traj_data[x[0], x[1], x[2]] = tensor_value[i]
-    traj_data = np.moveaxis(traj_data, [0, 1, 2], [0, 2, 1])
-    return traj_data
-
+# --------------------------------
+# Load scRNA-seq datasets
 
 def loadZebrafishData(data_dir, split_type):
     cnt_data = pd.read_csv("{}/{}-count_data-hvg.csv".format(data_dir, split_type), header=0, index_col=0)
@@ -120,23 +118,26 @@ def loadEmbryoidData(data_dir, split_type):
     ann_data = scanpy.AnnData(X=cnt_data, obs=meta_data)
     return ann_data
 
-
 # --------------------------------
+# Dataset directories
 zebrafish_data_dir = "../data/single_cell/experimental/zebrafish_embryonic/new_processed"
 mammalian_data_dir = "../data/single_cell/experimental/mammalian_cerebral_cortex/new_processed"
 wot_data_dir = "../data/single_cell/experimental/Schiebinger2019/processed/"
-# wot_data_dir = "/oscar/data/rsingh47/jzhan322/sc_Dynamic_Modelling/data/single_cell/experimental/Schiebinger2019/processed/"
 drosophila_data_dir = "../data/single_cell/experimental/drosophila_embryonic/processed/"
 pancreatic_data_dir = "../data/single_cell/experimental/mouse_pancreatic/processed/"
 embryoid_data_dir = "../data/single_cell/experimental/embryoid_body/processed/"
 
 
+
 def loadSCData(data_name, split_type):
+    '''
+    Main function to load scRNA-seq dataset and pre-process it.
+    '''
     print("[ Data={} | Split={} ] Loading data...".format(data_name, split_type))
     if data_name == "zebrafish":
         ann_data = loadZebrafishData(zebrafish_data_dir, split_type)
         ann_data.X = ann_data.X.astype(float)
-        processed_data = preprocess2(ann_data.copy())
+        processed_data = preprocess(ann_data.copy())
         cell_types =  processed_data.obs["ZF6S-Cluster"].apply(lambda x: "NAN" if pd.isna(x) else x).values
     elif data_name == "mammalian":
         ann_data = loadMammalianData(mammalian_data_dir, split_type)
@@ -146,7 +147,7 @@ def loadSCData(data_name, split_type):
         ann_data = loadDrosophilaData(drosophila_data_dir, split_type)
         print("Pre-processing...")
         ann_data.X = ann_data.X.astype(float)
-        processed_data = preprocess2(ann_data.copy())
+        processed_data = preprocess(ann_data.copy())
         cell_types = processed_data.obs.seurat_clusters.values
     elif data_name == "wot":
         ann_data = loadWOTData(wot_data_dir, split_type)
@@ -155,50 +156,12 @@ def loadSCData(data_name, split_type):
     elif data_name == "pancreatic":
         ann_data = loadPancreaticData(pancreatic_data_dir, split_type)
         ann_data.X = ann_data.X.astype(float)
-        processed_data = preprocess2(ann_data.copy())
+        processed_data = preprocess(ann_data.copy())
         cell_types = None
     elif data_name == "embryoid":
         ann_data = loadEmbryoidData(embryoid_data_dir, split_type)
         ann_data.X = ann_data.X.astype(float)
-        processed_data = preprocess2(ann_data.copy())
-        cell_types = None
-    else:
-        raise ValueError("Unknown data name.")
-    cell_tps = ann_data.obs["tp"]
-    n_tps = len(np.unique(cell_tps))
-    n_genes = ann_data.shape[1]
-    return processed_data, cell_tps, cell_types, n_genes, n_tps
-
-
-def loadSCCountData(data_name, split_type):
-    print("[ Data={} | Split={} ] Loading data...".format(data_name, split_type))
-    if data_name == "zebrafish":
-        ann_data = loadZebrafishData(zebrafish_data_dir, split_type)
-        ann_data.X =  ann_data.X.astype(float)
-        processed_data = ann_data.copy()
-        cell_types =  processed_data.obs["ZF6S-Cluster"].apply(lambda x: "NAN" if pd.isna(x) else x).values
-    elif data_name == "mammalian":
-        ann_data = loadMammalianData(mammalian_data_dir, split_type)
-        processed_data = ann_data.copy()
-        cell_types = processed_data.obs.New_cellType.values
-    elif data_name == "drosophila":
-        ann_data = loadDrosophilaData(drosophila_data_dir, split_type)
-        ann_data.X = ann_data.X.astype(float)
-        processed_data = ann_data.copy()
-        cell_types = processed_data.obs.seurat_clusters.values
-    elif data_name == "wot":
-        ann_data = loadWOTData(wot_data_dir, split_type)
-        processed_data = ann_data.copy()
-        cell_types = None
-    elif data_name == "pancreatic":
-        ann_data = loadPancreaticData(pancreatic_data_dir, split_type)
-        ann_data.X = ann_data.X.astype(float)
-        processed_data = ann_data.copy()
-        cell_types = None
-    elif data_name == "embryoid":
-        ann_data = loadEmbryoidData(embryoid_data_dir, split_type)
-        ann_data.X = ann_data.X.astype(float)
-        processed_data = ann_data.copy()
+        processed_data = preprocess(ann_data.copy())
         cell_types = None
     else:
         raise ValueError("Unknown data name.")
@@ -209,6 +172,9 @@ def loadSCCountData(data_name, split_type):
 
 
 def tpSplitInd(data_name, split_type):
+    '''
+    Get the training/testing timepoint split for each dataset.
+    '''
     if data_name == "zebrafish":
         if split_type == "interpolation":
             train_tps = [0, 1, 2, 3, 4, 5, 8, 9]
@@ -297,6 +263,16 @@ def tpSplitInd(data_name, split_type):
         raise ValueError("Unknown data name.")
     return train_tps, test_tps
 
+
+def splitBySpec(traj_data, train_tps, test_tps):
+    '''
+    Split timepoints into training and testing sets.
+    '''
+    train_data = [traj_data[t] for t in train_tps]
+    test_data = [traj_data[t] for t in test_tps]
+    return train_data, test_data
+
+# --------------------------------
 
 def tunedOurPars(data_name, split_type):
     latent_dim = 50
@@ -490,6 +466,7 @@ def tunedTrjectoryNetPars(data_name, split_type):
     else:
         raise ValueError("Unknown data name {}!".format(data_name))
     return latent_dim, top_k_reg, vecint
+
 # --------------------------------
 
 def traj2Ann(traj_data):
@@ -508,22 +485,9 @@ def ann2traj(ann_data):
     traj_data = np.moveaxis(traj_data, [0, 1, 2], [1, 0, 2])
     return traj_data
 
-
 # ---------------------------------
 
 def preprocess(ann_data):
-    # recipe_zheng17 w/o HVG selection
-    scanpy.pp.filter_genes(ann_data, min_counts=1)  # only consider genes with more than 1 count
-    scanpy.pp.normalize_per_cell(  # normalize with total UMI count per cell
-        ann_data, key_n_counts='n_counts_all'
-    )
-    scanpy.pp.normalize_per_cell(ann_data)  # renormalize after filtering
-    scanpy.pp.log1p(ann_data)  # log transform: adata.X = log(adata.X + 1)
-    scanpy.pp.scale(ann_data)  # scale to unit variance and shift to zero mean
-    return ann_data
-
-
-def preprocess2(ann_data):
     # adopt recipe_zheng17 w/o HVG selection
     # omit scaling part to avoid information leakage
     scanpy.pp.normalize_per_cell(  # normalize with total UMI count per cell
@@ -543,7 +507,6 @@ def postprocess(data):
         log_data = torch.log(norm_data + 1)
     return log_data
 
-
 # ---------------------------------
 
 def sampleOT(true_data, pred_data, sample_n, sample_T):
@@ -554,7 +517,6 @@ def sampleOT(true_data, pred_data, sample_n, sample_T):
         ot_list.append(_ot(true_data[true_rand_idx,:], pred_data[pred_rand_idx,:]))
     return np.mean(ot_list)
 
-# ---------------------------------
 
 def sampleGaussian(mean, std):
     '''
@@ -564,9 +526,3 @@ def sampleGaussian(mean, std):
     r = d.sample(mean.size()).squeeze(-1)
     x = r * std.float() + mean.float()
     return x
-
-
-def sampleNB(count, prob):
-    nb_dist = dist.negative_binomial.NegativeBinomial(count, prob)
-    obs = nb_dist.sample()
-    return obs

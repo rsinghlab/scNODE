@@ -11,7 +11,7 @@ import umap
 from datetime import datetime
 import matplotlib.pyplot as plt
 
-from plotting.visualization import plotUMAP, plotUMAPTimePoint, plotUMAPTestTime, umapWithoutPCA, umapWithPCA
+from plotting.visualization import plotUMAP, plotPredAllTime, plotPredTestTime, umapWithoutPCA, umapWithPCA
 from benchmark.Compare_SingleCell_Predictions import basicStats, globalEvaluation
 from benchmark.BenchmarkUtils import loadSCData, tpSplitInd, tunedPRESCIENTPars
 from prescient_model.process_data import main as prepare_data

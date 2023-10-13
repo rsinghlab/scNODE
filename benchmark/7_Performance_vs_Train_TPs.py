@@ -17,14 +17,13 @@ from sklearn.decomposition import PCA
 from model.layer import LinearNet, LinearVAENet
 from model.diff_solver import ODE
 from model.dynamic_model import scNODE
-from benchmark.BenchmarkUtils import loadZebrafishData, preprocess, preprocess2, sampleGaussian, loadDrosophilaData, loadWOTData, loadMammalianData
+from benchmark.BenchmarkUtils import loadZebrafishData, preprocess, preprocess, sampleGaussian, loadDrosophilaData, loadWOTData, loadMammalianData
 from optim.loss_func import MSELoss, SinkhornLoss, umapLoss
-from plotting.visualization import plotUMAP, plotUMAPTimePoint, plotUMAPTestTime, umapWithoutPCA, umapWithPCA
-from plotting.utils import linearSegmentCMap
+from plotting.visualization import plotUMAP, plotPredAllTime, plotPredTestTime, umapWithoutPCA, umapWithPCA
+from plotting import linearSegmentCMap, _removeTopRightBorders, _removeAllBorders
 from data.preprocessing import splitBySpec
 from benchmark.Compare_SingleCell_Predictions import basicStats, globalEvaluation
 from plotting.__init__ import *
-from plotting.utils import _removeTopRightBorders, _removeAllBorders
 
 # ======================================================
 from umap.umap_ import nearest_neighbors as umap_nearest_neighbors
@@ -43,7 +42,7 @@ def loadSCData(data_name, split_type):
     if data_name == "zebrafish":
         ann_data = loadZebrafishData(zebrafish_data_dir, split_type)
         print("Pre-processing...")
-        processed_data = preprocess2(ann_data.copy())
+        processed_data = preprocess(ann_data.copy())
         cell_types =  processed_data.obs["ZF6S-Cluster"].apply(lambda x: "NAN" if pd.isna(x) else x).values
     elif data_name == "mammalian":
         ann_data = loadMammalianData(mammalian_data_dir, split_type)
@@ -52,7 +51,7 @@ def loadSCData(data_name, split_type):
     elif data_name == "drosophila":
         ann_data = loadDrosophilaData(drosophila_data_dir, split_type)
         print("Pre-processing...")
-        processed_data = preprocess2(ann_data.copy())
+        processed_data = preprocess(ann_data.copy())
         cell_types = processed_data.obs.seurat_clusters.values
     elif data_name == "wot":
         ann_data = loadWOTData(wot_data_dir, split_type)

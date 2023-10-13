@@ -1,6 +1,9 @@
 '''
 Description:
     The dummy model: replicates the previous time point as the estimation.
+
+Author:
+    Jiaqi Zhang <jiaqi_zhang2@brown.edu>
 '''
 
 class DummyModel:

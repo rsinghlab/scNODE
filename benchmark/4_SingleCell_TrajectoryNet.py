@@ -12,7 +12,7 @@ sys.path.append("../TrajectoryNet_model/")
 
 from TrajectoryNet_model.running import TrajectoryNetTrain, TrajectoryNetSimulate
 from benchmark.BenchmarkUtils import loadEmbryoidData, loadPancreaticData, tunedTrjectoryNetPars
-from plotting.visualization import plotUMAP, plotUMAPTimePoint, plotUMAPTestTime, umapWithoutPCA, umapWithPCA
+from plotting.visualization import plotUMAP, plotPredAllTime, plotPredTestTime, umapWithoutPCA, umapWithPCA
 
 # ======================================================
 

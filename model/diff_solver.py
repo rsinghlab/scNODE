@@ -1,6 +1,9 @@
 '''
 Description:
     Differential equation solver.
+
+Author:
+    Jiaqi Zhang <jiaqi_zhang2@brown.edu>
 '''
 import torch
 import torchdiffeq

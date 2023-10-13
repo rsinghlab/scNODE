@@ -11,7 +11,7 @@ import itertools
 import scanpy
 
 from wot_model.running import wotSimulate
-from plotting.visualization import plotUMAP, plotUMAPTimePoint, plotUMAPTestTime, umapWithoutPCA, umapWithPCA
+from plotting.visualization import plotUMAP, plotPredAllTime, plotPredTestTime, umapWithoutPCA, umapWithPCA
 from benchmark.Compare_SingleCell_Predictions import basicStats, globalEvaluation
 from benchmark.BenchmarkUtils import loadSCData, tpSplitInd, tunedWOTPars
 

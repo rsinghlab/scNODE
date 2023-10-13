@@ -13,7 +13,7 @@ import time
 from benchmark.BenchmarkUtils import loadSCData, tpSplitInd, tunedOurPars
 from data.preprocessing import splitBySpec
 from benchmark.BenchmarkUtils import sampleOT
-from optim.running import constructLatentODEModel, latentODESimulate
+from optim.running import constructscNODEModel, scNODEPredict
 from benchmark.BenchmarkUtils import sampleGaussian
 from optim.loss_func import SinkhornLoss, MSELoss
 
@@ -59,7 +59,7 @@ act_name = "relu"
 n_sim_cells = 2000
 
 latent_dim, drift_latent_size, enc_latent_list, dec_latent_list = tunedOurPars(data_name, split_type)
-latent_ode_model = constructLatentODEModel(
+latent_ode_model = constructscNODEModel(
     n_genes, latent_dim=latent_dim,
     enc_latent_list=enc_latent_list, dec_latent_list=dec_latent_list, drift_latent_size=drift_latent_size,
     latent_enc_act="none", latent_dec_act=act_name, drift_act=act_name,
@@ -135,7 +135,7 @@ for e in range(epochs):
         # -----
         latent_ode_model.eval()
         recon_obs, first_latent_dist, _, latent_seq = latent_ode_model(train_data, train_tps, num_IWAE_sample, batch_size=None)
-        all_recon_obs = latentODESimulate(latent_ode_model, first_latent_dist, tps, n_cells=n_sim_cells)
+        all_recon_obs = scNODEPredict(latent_ode_model, first_latent_dist, tps, n_cells=n_sim_cells)
         all_recon_obs = [all_recon_obs[:, t, :] for t in range(all_recon_obs.shape[1])]
         t_global_metric = [sampleOT(traj_data[t].detach().numpy(), all_recon_obs[t], sample_n=100, sample_T=10) for t in test_tps_list]
         iter_metric.append(t_global_metric)

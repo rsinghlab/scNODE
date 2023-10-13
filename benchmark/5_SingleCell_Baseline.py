@@ -12,7 +12,7 @@ from tqdm import tqdm
 import itertools
 
 from benchmark.BenchmarkUtils import loadSCData, tpSplitInd
-from plotting.visualization import plotUMAP, plotUMAPTimePoint, plotUMAPTestTime, umapWithoutPCA, umapWithPCA
+from plotting.visualization import plotUMAP, plotPredAllTime, plotPredTestTime, umapWithoutPCA, umapWithPCA
 from data.preprocessing import splitBySpec
 from benchmark.Compare_SingleCell_Predictions import globalEvaluation
 from optim.running import constructDummyModel, constructFNNModel, dummySimulate, FNNTrain, FNNSimulate

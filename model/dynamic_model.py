@@ -1,6 +1,9 @@
 '''
 Description:
     The main class of our scNODE model.
+
+Author:
+    Jiaqi Zhang <jiaqi_zhang2@brown.edu>
 '''
 import torch
 import torch.nn as nn

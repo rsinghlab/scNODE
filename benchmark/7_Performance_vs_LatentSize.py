@@ -18,12 +18,12 @@ from model.layer import LinearNet, LinearVAENet
 from model.diff_solver import ODE
 from model.dynamic_model import scNODE
 from optim.loss_func import MSELoss, SinkhornLoss, umapLoss
-from plotting.visualization import plotUMAP, plotUMAPTimePoint, plotUMAPTestTime, umapWithoutPCA, umapWithPCA
-from plotting.utils import linearSegmentCMap
+from plotting.visualization import plotUMAP, plotPredAllTime, plotPredTestTime, umapWithoutPCA, umapWithPCA
+from plotting import linearSegmentCMap
 from data.preprocessing import splitBySpec
 from benchmark.Compare_SingleCell_Predictions import basicStats, globalEvaluation
 from benchmark.BenchmarkUtils import loadSCData, tpSplitInd, tunedOurPars, sampleGaussian
-from optim.running import constructLatentODEModel, latentODETrainWithPreTrain, latentODESimulate
+from optim.running import constructscNODEModel, scNODETrainWithPreTrain, scNODEPredict
 
 from plotting.__init__ import *
 
@@ -94,18 +94,23 @@ def runExp():
         print(latent_encoder)
         print(obs_decoder)
         # Model running
-        latent_ode_model = constructLatentODEModel(
+        latent_ode_model = constructscNODEModel(
             n_genes, latent_dim=latent_dim,
             enc_latent_list=enc_latent_list, dec_latent_list=dec_latent_list, drift_latent_size=drift_latent_size,
             latent_enc_act="none", latent_dec_act=act_name, drift_act=act_name,
             ode_method="euler"
         )
-        latent_ode_model, loss_list, recon_obs, first_latent_dist, latent_seq = latentODETrainWithPreTrain(
-            train_data, train_tps, latent_ode_model, latent_coeff=latent_coeff,
-            epochs=epochs, iters=iters, batch_size=batch_size, lr=lr,
-            pretrain_iters=pretrain_iters, pretrain_lr=pretrain_lr, only_train_de=False
-        )
-        all_recon_obs = latentODESimulate(latent_ode_model, first_latent_dist, tps, n_cells=n_sim_cells)  # (# trajs, # tps, # genes)
+        latent_ode_model, loss_list, recon_obs, first_latent_dist, latent_seq = scNODETrainWithPreTrain(train_data,
+                                                                                                        train_tps,
+                                                                                                        latent_ode_model,
+                                                                                                        latent_coeff=latent_coeff,
+                                                                                                        epochs=epochs,
+                                                                                                        iters=iters,
+                                                                                                        batch_size=batch_size,
+                                                                                                        lr=lr,
+                                                                                                        pretrain_iters=pretrain_iters,
+                                                                                                        pretrain_lr=pretrain_lr)
+        all_recon_obs = scNODEPredict(latent_ode_model, first_latent_dist, tps, n_cells=n_sim_cells)  # (# trajs, # tps, # genes)
         reorder_pred_data = [all_recon_obs[:, t, :] for t in range(all_recon_obs.shape[1])]
         # Compute metric for testing time points
         print("Compute metrics...")

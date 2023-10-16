@@ -6,6 +6,9 @@ Author:
     Jiaqi Zhang <jiaqi_zhang2@brown.edu>
 '''
 import numpy as np
+import tabulate
+import pandas as pd
+from sklearn.neighbors import NearestNeighbors
 from plotting.__init__ import *
 
 # ======================================
@@ -400,14 +403,141 @@ def plotMetricBarHor(dataset_list, inter_model_list, extra_model_list, dataset_n
     _removeTopRightBorders(ax_list[1])
     plt.xticks(np.arange(len(dataset_list)) - extra_width*len(extra_model_list)/2, [dataset_name_dict[x] for x in dataset_list])
     plt.xlabel("Dataset")
-    # ax_list[0].legend(loc="upper left", bbox_to_anchor=(0.0, 1.1), title_fontsize=14, fontsize=10, ncol=3)
-    # ax_list[0].legend([mdoel_name_dict[x] for x in inter_model_list], loc="center left", bbox_to_anchor=(-0.0, 0.5), fontsize=11)
-
-    # fig.add_axes([0.0, 1.0, 1.0, 0.2])
     handles, labels = ax_list[0].get_legend_handles_labels()
     fig.legend(handles, labels, loc=(0.25, 1), fontsize=12, ncol=5)
 
     plt.subplots_adjust(hspace=2.5)
     plt.tight_layout()
     plt.savefig("../res/figs/exp_l2_bar_hori.pdf")
+    plt.show()
+
+
+# ======================================
+
+def _plotTable(df_data):
+    print(tabulate.tabulate(
+        df_data, headers=[df_data.index.names[0] + '/' + df_data.columns.names[1]] + list(df_data.columns),
+        tablefmt="grid"
+    ))
+
+
+def printMetric(model_l2, model_ot, model_list, column_names):
+    print("\n" * 2)
+    metric_df = pd.DataFrame(
+        data=model_l2,
+        index=pd.MultiIndex.from_tuples([
+            ("L2", m) for m in model_list
+        ], names=("Metric", "Model")),
+        columns=pd.MultiIndex.from_tuples(column_names, names=("Type", "TP"))
+    )
+    _plotTable(metric_df)
+
+    print("\n" * 2)
+    metric_df = pd.DataFrame(
+        data=model_ot,
+        index=pd.MultiIndex.from_tuples([
+            ("OT", m) for m in model_list
+        ], names=("Metric", "Model")),
+        columns=pd.MultiIndex.from_tuples(column_names, names=("Type", "TP"))
+    )
+    _plotTable(metric_df)
+
+
+# ======================================
+
+def computeDrift(traj_data, latent_ode_model):
+    # Compute latent and drift seq
+    print("Computing latent and drift sequence...")
+    latent_seq, _ = latent_ode_model.vaeReconstruct(traj_data)
+    drift_seq = [latent_ode_model.computeDrift(each_latent).detach().numpy() for each_latent in latent_seq]
+    latent_seq = [each_latent.detach().numpy() for each_latent in latent_seq]
+    next_seq = [each + 0.1 * drift_seq[i] for i, each in enumerate(latent_seq)]
+    return latent_seq, next_seq, drift_seq
+
+
+def plotStream(umap_scatter_data, umap_latent_data, umap_next_data, color_list, num_sep=200, n_neighbors=10):
+    '''
+    Plot streams for cell velocities.
+
+    Variables:
+        umap_scatter_data: UMAP embeddings for scatter plot.
+        umap_latent_data, umap_next_data: UMAP embeddings for fitting the NN and computing velocities.
+    References:
+        [1] https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.streamplot.html
+        [2] https://github.com/theislab/scvelo/blob/master/scvelo/plotting/velocity_embedding_stream.py
+    '''
+    concat_umap_scatter = np.concatenate(umap_scatter_data)
+    concat_umap_latent = np.concatenate(umap_latent_data)
+    concat_umap_next = np.concatenate(umap_next_data)
+    # Construct grid coordinates
+    min_X, max_X = concat_umap_scatter[:, 0].min(), concat_umap_scatter[:, 0].max()
+    min_Y, max_Y = concat_umap_scatter[:, 1].min(), concat_umap_scatter[:, 1].max()
+    X, Y = np.meshgrid(np.linspace(min_X, max_X, num_sep), np.linspace(min_Y, max_Y, num_sep))
+    grid_coord = np.vstack([i.flat for i in (X, Y)]).T
+    # For each grid point, find its nearest neighbors
+    nn = NearestNeighbors(n_neighbors=n_neighbors, n_jobs=-1)
+    nn.fit(concat_umap_latent)
+    dists, neighs = nn.kneighbors(grid_coord)
+    # Use the average of neighbors to compute velocity
+    grid_latent = concat_umap_latent[neighs.squeeze()]
+    grid_next = concat_umap_next[neighs.squeeze()]
+    velocity = (grid_next - grid_latent).mean(axis=1)
+    U, V = velocity[:, 0].reshape(num_sep, num_sep), velocity[:, 1].reshape(num_sep, num_sep)
+    # Filter outlier points
+    grid_min_dist = dists.min(axis=1)
+    # cutoff_val = np.percentile(grid_min_dist, 50)
+    cutoff_val = 0.01
+    selected_idx = np.where(grid_min_dist < cutoff_val)[0]
+    # Plotting
+    plt.figure(figsize=(13, 6))
+    plt.title("Latent Velocity")
+    for t, each in enumerate(umap_scatter_data):
+        plt.scatter(each[:, 0], each[:, 1], color=color_list[t], s=10, alpha=0.6)
+        plt.scatter([], [], color=color_list[t], s=10, label=t)
+    plt.legend(loc="center left", bbox_to_anchor=(1.0, 0.5))
+    plt.streamplot(X, Y, U, V, density=2.0, arrowsize=1.5, color="k", linewidth=1.0, start_points=grid_coord[selected_idx])
+    plt.show()
+
+
+def plotStreamByCellType(umap_scatter_data, umap_latent_data, umap_next_data, traj_cell_type, num_sep=200, n_neighbors=10):
+    '''
+        Plot streams for cell velocities w.r.t. cell types
+
+        References:
+            [1] https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.streamplot.html
+            [2] https://github.com/theislab/scvelo/blob/master/scvelo/plotting/velocity_embedding_stream.py
+        '''
+    concat_umap_scatter = np.concatenate(umap_scatter_data)
+    concat_umap_latent = np.concatenate(umap_latent_data)
+    concat_umap_next = np.concatenate(umap_next_data)
+    concat_cell_types = np.concatenate(traj_cell_type)
+    color_list = sbn.color_palette("dark", len(np.unique(concat_cell_types)))
+    # Construct grid coordinates
+    min_X, max_X = concat_umap_scatter[:, 0].min(), concat_umap_scatter[:, 0].max()
+    min_Y, max_Y = concat_umap_scatter[:, 1].min(), concat_umap_scatter[:, 1].max()
+    X, Y = np.meshgrid(np.linspace(min_X, max_X, num_sep), np.linspace(min_Y, max_Y, num_sep))
+    grid_coord = np.vstack([i.flat for i in (X, Y)]).T
+    # For each grid point, find its nearest neighbors
+    nn = NearestNeighbors(n_neighbors=n_neighbors, n_jobs=-1)
+    nn.fit(concat_umap_latent)
+    dists, neighs = nn.kneighbors(grid_coord)
+    # Use the average of neighbors to compute velocity
+    grid_latent = concat_umap_latent[neighs.squeeze()]
+    grid_next = concat_umap_next[neighs.squeeze()]
+    velocity = (grid_next - grid_latent).mean(axis=1)
+    U, V = velocity[:, 0].reshape(num_sep, num_sep), velocity[:, 1].reshape(num_sep, num_sep)
+    # Filter outlier points
+    grid_min_dist = dists.min(axis=1)
+    # cutoff_val = np.percentile(grid_min_dist, 50)
+    cutoff_val = 0.01
+    selected_idx = np.where(grid_min_dist < cutoff_val)[0]
+    # Plotting
+    plt.figure(figsize=(13, 6))
+    plt.title("Latent Velocity")
+    for i, c in enumerate(np.unique(concat_cell_types)):
+        c_idx = np.where(concat_cell_types == c)[0]
+        plt.scatter(concat_umap_scatter[c_idx, 0], concat_umap_scatter[c_idx, 1], color=color_list[i] if c != "NAN" else gray_color, s=10, alpha=0.6)
+        plt.scatter([], [], color=color_list[i], s=20, label=c)
+    plt.legend(loc="center left", bbox_to_anchor=(1.0, 0.5))
+    plt.streamplot(X, Y, U, V, density=2.0, arrowsize=1.5, color="k", linewidth=1.0, start_points=grid_coord[selected_idx])
     plt.show()

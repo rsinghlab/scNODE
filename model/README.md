@@ -11,4 +11,4 @@ Main codes for scNODE and Dummy models.
 
 ## Dummy
 
-- [dummy_model.py](./dummy_model.py): Main class of Dummy model.
+- [dummy_model.py](../baseline/dummy_model.py): Main class of Dummy model.

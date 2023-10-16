@@ -120,7 +120,10 @@ def loadEmbryoidData(data_dir, split_type):
 
 # --------------------------------
 # Dataset directories
-zebrafish_data_dir = "../data/single_cell/experimental/zebrafish_embryonic/new_processed"
+#TODO: data directory
+
+# zebrafish_data_dir = "../data/single_cell/experimental/zebrafish_embryonic/new_processed"
+zebrafish_data_dir = "../../sc_Dynamic_Modelling/data/single_cell/experimental/zebrafish_embryonic/new_processed"
 mammalian_data_dir = "../data/single_cell/experimental/mammalian_cerebral_cortex/new_processed"
 wot_data_dir = "../data/single_cell/experimental/Schiebinger2019/processed/"
 drosophila_data_dir = "../data/single_cell/experimental/drosophila_embryonic/processed/"

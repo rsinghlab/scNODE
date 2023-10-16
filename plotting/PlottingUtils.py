@@ -48,3 +48,10 @@ def onlyPCA(traj_data, pca_pcs):
 
 # ======================================
 
+def computeLatentEmbedding(latent_seq, next_seq, n_neighbors, min_dist):
+    latent_tp_list = np.concatenate([np.repeat(t, each.shape[0]) for t, each in enumerate(latent_seq)])
+    umap_latent_data, umap_model = umapWithoutPCA(np.concatenate(latent_seq, axis=0), n_neighbors=n_neighbors, min_dist=min_dist)
+    # umap_latent_data, umap_model = onlyPCA(np.concatenate(latent_seq, axis=0), pca_pcs=2)
+    umap_latent_data = [umap_latent_data[np.where(latent_tp_list == t)[0], :] for t in range(len(latent_seq))]
+    umap_next_data = [umap_model.transform(each) for each in next_seq]
+    return umap_latent_data, umap_next_data, umap_model, latent_tp_list

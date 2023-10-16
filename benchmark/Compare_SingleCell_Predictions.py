@@ -10,7 +10,7 @@ import pandas as pd
 import scanpy
 from plotting.__init__ import *
 from plotting.PlottingUtils import computeVisEmbedding
-from plotting import _removeTopRightBorders, _removeAllBorders
+from plotting.visualization import compareUMAPTestTime, plotMetricBarHor, plotMetricBarVer, printMetric
 from optim.evaluation import globalEvaluation, basicStats, LISIScore
 
 # ======================================================
@@ -72,7 +72,6 @@ def _loadTrjectoryNetPrediction(filename):
     tps = res["tps"]["all"]
     test_tps = res["tps"]["test"]
     return true_data, pred_data, tps, test_tps, None
-
 
 # ======================================================
 
@@ -139,15 +138,9 @@ def computeMetric(true_data, model_pred_data, tps, test_tps, model_list, n_sim_c
         print("-" * 70)
         print("t = {}".format(t))
         for m_idx, m in enumerate(model_list):
-            m_cell_1D_metric = oneDimEvaluation(true_cell_stats[t], model_cell_stats[m_idx][t])
-            m_gene_1D_metric = oneDimEvaluation(true_gene_stats[t], model_gene_stats[m_idx][t])
-            m_cell_2D_metric = twoDimEvaluation(true_cell_stats[t], model_cell_stats[m_idx][t])
-            m_gene_2D_metric = twoDimEvaluation(true_gene_stats[t], model_gene_stats[m_idx][t])
             m_global_metric = globalEvaluation(true_data[t], sampled_model_pred_data[m_idx][t])
             # -----
             test_eval_metric[t][m] = {
-                "cell_1d": m_cell_1D_metric, "cell_2d": m_cell_2D_metric,
-                "gene_1d": m_gene_1D_metric, "gene_2d": m_gene_2D_metric,
                 "global": m_global_metric
             }
     return test_eval_metric, basic_stats
@@ -163,11 +156,6 @@ mdoel_name_dict = {
     "TrajectoryNet": "TrajectoryNet",
 }
 
-
-
-
-# ======================================
-
 inter_model_list = ["latent_ODE_OT_pretrain", "PRESCIENT", "WOT", "TrajectoryNet", "dummy"]
 extra_model_list = ["latent_ODE_OT_pretrain", "PRESCIENT", "dummy"]
 dataset_name_dict = {
@@ -181,11 +169,10 @@ dataset_name_dict = {
 dataset_list = ["embryoid", "pancreatic", "zebrafish", "mammalian", "drosophila", "WOT"]
 
 
-
-
 if __name__ == '__main__':
-    data_name = "mammalian"  # zebrafish, mammalian, drosophila, WOT, embryoid, pancreatic
-    split_type = "three_forecasting"  # three_interpolation, three_forecasting, one_interpolation, one_forecasting, two_forecasting
+    #TODO: save dir; test all plotting; use pre-computed data for plotting
+    data_name = "zebrafish"  # zebrafish, mammalian, drosophila, WOT, embryoid, pancreatic
+    split_type = "three_interpolation"  # three_interpolation, three_forecasting, one_interpolation, one_forecasting, two_forecasting
     print("[ {}-{} ] Compare Predictions".format(data_name, split_type))
     # model_list = ["latent_ODE_OT_pretrain", "PRESCIENT", "WOT", "dummy", "FNN", "TrajectoryNet"]
     if split_type == "three_interpolation":
@@ -246,5 +233,31 @@ if __name__ == '__main__':
     # np.save("../res/comparison/{}-{}-model_basic_stats.npy".format(data_name, split_type), basic_stats)
     # -----
     # plotMetricBar()
-    plotMetricBarHor()
+    # plotMetricBarHor()
+    # -----
+    # Load metrics
+    data_name = "WOT"  # zebrafish, mammalian, WOT, drosophila, Weinreb, embryoid, pancreatic
+    split_type = "three_forecasting"  # three_interpolation, three_forecasting, one_interpolation, one_forecasting
+    metric_filename = "../res/comparison/{}-{}-model_metrics.npy".format(data_name, split_type)
+    stats_filename = "../res/comparison/{}-{}-model_basic_stats.npy".format(data_name, split_type)
+    metric_dict = np.load(metric_filename, allow_pickle=True).item()
+    stats_dict = np.load(stats_filename, allow_pickle=True).item()
+    if split_type == "three_interpolation":
+        model_list = ["latent_ODE_OT_pretrain", "PRESCIENT", "WOT", "FNN", "dummy"]
+    elif split_type == "three_forecasting":
+        model_list = ["latent_ODE_OT_pretrain", "PRESCIENT", "FNN", "dummy"]
+    elif split_type == "one_forecasting":
+        model_list = ["latent_ODE_OT_pretrain", "PRESCIENT", "FNN", "dummy"]
+    elif split_type == "one_interpolation":
+        model_list = ["latent_ODE_OT_pretrain", "PRESCIENT", "WOT", "TrajectoryNet", "FNN", "dummy"]
+    elif split_type == "two_forecasting":
+        model_list = ["latent_ODE_OT_pretrain", "PRESCIENT", "FNN", "dummy"]
+    test_tps = list(metric_dict.keys())
+    n_test_tps = len(test_tps)
+    column_names = [("t", t) for t in test_tps]
+
+    # Compare pair-wise L2 dist and OT
+    model_l2 = [[metric_dict[t][m]["global"]["l2"] for t in test_tps] for m in model_list]
+    model_ot = [[metric_dict[t][m]["global"]["ot"] for t in test_tps] for m in model_list]
+    printMetric(model_l2, model_ot, model_list, column_names)
 

@@ -1,43 +1,36 @@
 '''
 Description:
-    Compare performance with different number of training time points.
+    Test performance with different regularization coefficient beta.
+
+Author:
+    Jiaqi Zhang <jiaqi_zhang2@brown.edu>
 '''
 import torch
-import torch.distributions as dist
 import numpy as np
-from datetime import datetime
-from tqdm import tqdm
-import itertools
 
 from model.layer import LinearNet, LinearVAENet
-from plotting.visualization import plotUMAP, plotPredTestTime, umapWithoutPCA
-from plotting import linearSegmentCMap, _removeAllBorders
-from data.preprocessing import splitBySpec
-from benchmark.Compare_SingleCell_Predictions import basicStats, globalEvaluation
-from benchmark.BenchmarkUtils import loadSCData, tpSplitInd, sampleGaussian
+from plotting.PlottingUtils import umapWithoutPCA
+from plotting import _removeAllBorders
+from benchmark.Compare_SingleCell_Predictions import globalEvaluation
+from benchmark.BenchmarkUtils import loadSCData, tpSplitInd, splitBySpec
 from optim.running import constructscNODEModel, scNODETrainWithPreTrain, scNODEPredict
 from plotting.__init__ import *
-
-# ======================================================
-from umap.umap_ import nearest_neighbors as umap_nearest_neighbors
-
 
 # ======================================================
 
 def runExp():
     # Load data and pre-processing
     print("=" * 70)
-    data_name = "zebrafish"  # zebrafish, mammalian, drosophila, wot, pancreatic, embryoid
+    data_name = "zebrafish"
     print("[ {} ]".format(data_name).center(60))
-    split_type = "three_interpolation"  # three_interpolation, two_forecasting
+    split_type = "three_interpolation"
     print("Split type: {}".format(split_type))
     ann_data, cell_tps, cell_types, n_genes, n_tps = loadSCData(data_name, split_type)
     train_tps, test_tps = tpSplitInd(data_name, split_type)
     data = ann_data.X
 
     # Convert to torch project
-    traj_data = [torch.FloatTensor(data[np.where(cell_tps == t)[0], :]) for t in
-                 range(1, n_tps + 1)]  # (# tps, # cells, # genes)
+    traj_data = [torch.FloatTensor(data[np.where(cell_tps == t)[0], :]) for t in range(1, n_tps + 1)]  # (# tps, # cells, # genes)
     if cell_types is not None:
         traj_cell_types = [cell_types[np.where(cell_tps == t)[0]] for t in range(1, n_tps + 1)]
 
@@ -93,18 +86,11 @@ def runExp():
             latent_enc_act="none", latent_dec_act=act_name, drift_act=act_name,
             ode_method="euler"
         )
-        latent_ode_model, loss_list, recon_obs, first_latent_dist, latent_seq = scNODETrainWithPreTrain(train_data,
-                                                                                                        train_tps,
-                                                                                                        latent_ode_model,
-                                                                                                        latent_coeff=latent_coeff,
-                                                                                                        epochs=epochs,
-                                                                                                        iters=iters,
-                                                                                                        batch_size=batch_size,
-                                                                                                        lr=lr,
-                                                                                                        pretrain_iters=pretrain_iters,
-                                                                                                        pretrain_lr=pretrain_lr)
-        all_recon_obs = scNODEPredict(latent_ode_model, first_latent_dist, tps,
-                                      n_cells=n_sim_cells)  # (# trajs, # tps, # genes)
+        latent_ode_model, loss_list, recon_obs, first_latent_dist, latent_seq = scNODETrainWithPreTrain(
+            train_data, train_tps, latent_ode_model, latent_coeff=latent_coeff, epochs=epochs, iters=iters,
+            batch_size=batch_size, lr=lr, pretrain_iters=pretrain_iters, pretrain_lr=pretrain_lr
+        )
+        all_recon_obs = scNODEPredict(latent_ode_model, traj_data[0], tps, n_cells=n_sim_cells)
         reorder_pred_data = [all_recon_obs[:, t, :] for t in range(all_recon_obs.shape[1])]
         # Compute metric for testing time points
         print("Compute metrics...")
@@ -157,8 +143,6 @@ def evaluateExp():
     avg_l2_list = np.mean(l2_list, axis=1)
     print("OT", avg_ot_list)
     print("L2", avg_l2_list)
-    n_tps = len(train_tps) + len(test_tps)
-    color_list = Cube1_6.mpl_colors
     plt.figure(figsize=(8, 4))
     plt.subplot(2, 1, 1)
     plt.bar(np.arange(len(avg_ot_list)), avg_ot_list, color=white_color, edgecolor="k", linewidth=2.0, capsize=5.0)
@@ -286,9 +270,9 @@ def visLatent():
 
 
 if __name__ == '__main__':
-    # runExp()
+    runExp()
     # evaluateExp()
     # -----
     # computeLatent()
-    visLatent()
+    # visLatent()
     pass

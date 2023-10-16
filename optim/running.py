@@ -13,7 +13,7 @@ import itertools
 from model.layer import LinearNet, LinearVAENet
 from model.diff_solver import ODE
 from model.dynamic_model import scNODE
-from model.dummy_model import DummyModel
+from baseline.dummy_model import DummyModel
 from optim.loss_func import SinkhornLoss, MSELoss
 from benchmark.BenchmarkUtils import sampleGaussian
 
@@ -139,9 +139,9 @@ def scNODETrainWithPreTrain(
             recon_obs, first_latent_dist, first_time_true_batch, latent_seq = latent_ode_model(
                 train_data, train_tps, batch_size=batch_size)
             encoder_latent_seq = [
-                latent_ode_model.singleReconstruct(
-                    each[np.random.choice(np.arange(each.shape[0]), size=batch_size, replace=(each.shape[0] < batch_size)), :]
-                )[1]
+                latent_ode_model.vaeReconstruct(
+                    [each[np.random.choice(np.arange(each.shape[0]), size=batch_size, replace=(each.shape[0] < batch_size)), :]]
+                )[0][0]
                 for each in train_data
             ]
             # -----
@@ -163,11 +163,11 @@ def scNODETrainWithPreTrain(
     return latent_ode_model, loss_list, recon_obs, first_latent_dist, latent_seq
 
 
-def scNODEPredict(latent_ode_model, first_latent_dist, tps, n_cells, batch_size=None):
+def scNODEPredict(latent_ode_model, first_tp_data, tps, n_cells):
     '''
     scNODE predicts expressions.
     :param latent_ode_model (torch.Model): scNODE model.
-    :param first_latent_dist (torch.dist.Normal): VAE latent distribution.
+    :param first_tp_data (torch.FloatTensor): Expression at the first timepoint.
     :param tps (torch.FloatTensor): A list of timepoints to predict.
     :param n_cells (int): The number of cells to predict at each timepoint.
     :param batch_size (None or int): Either None indicates predicting in a whole or an integer representing predicting
@@ -175,10 +175,7 @@ def scNODEPredict(latent_ode_model, first_latent_dist, tps, n_cells, batch_size=
     :return: (torch.FloatTensor) Predicted expression with the shape of (# cells, # tps, # genes).
     '''
     latent_ode_model.eval()
-    if batch_size is None:
-        _, all_pred_data = latent_ode_model.predict(first_latent_dist, tps, n_cells=n_cells)
-    else:
-        _, all_pred_data = latent_ode_model.batchPredict(first_latent_dist, tps, n_cells=n_cells, batch_size=batch_size)
+    _, _, all_pred_data = latent_ode_model.predict(first_tp_data, tps, n_cells=n_cells)
     all_pred_data = all_pred_data.detach().numpy()  # (# cells, # tps, # genes)
     return all_pred_data
 

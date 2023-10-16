@@ -81,17 +81,18 @@ class scNODE(nn.Module):
         return first_latent_sample, latent_seq, recon_obs # NOTE: also return the list of latent variables
 
 
-    def computeDrift(self, latent_seq):
+    def computeDrift(self, latent_var):
         '''
         Compute drifts corresponding to a list of latent variables.
-        :param latent_seq (list of torch.FloatTensor): A list of latent variables.
-        :return: (list of torch.FloatTensor) A list of drifts predicted at given timepoints.
+        :param latent_var (torch.FloatTensor): Latent variable.
+        :return: (list of torch.FloatTensor) Drift.
         '''
-        drift_seq = []
-        for i in range(latent_seq.shape[1]):
-            drift_seq.append(self.diffeq_decoder.net.forwardWithTime(None, latent_seq[:, i, :]).unsqueeze(dim=0))
-        drift_seq = torch.moveaxis(torch.concatenate(drift_seq, dim=0), [0, 1, 2], [1, 0, 2])  # (# cells, # tps, latent size)
-        return drift_seq
+        # drift_seq = []
+        # for i in range(latent_seq.shape[1]):
+        #     drift_seq.append()
+        # drift_seq = torch.moveaxis(torch.concatenate(drift_seq, dim=0), [0, 1, 2], [1, 0, 2])  # (# cells, # tps, latent size)
+        drift = self.diffeq_decoder.net.forwardWithTime(None, latent_var)
+        return drift
 
 
     def vaeReconstruct(self, data):
@@ -108,8 +109,8 @@ class scNODE(nn.Module):
             latent_mean, latent_std = self.latent_encoder(torch.FloatTensor(t_data))
             latent_sample = self._sampleGaussian(latent_mean, latent_std)
             recon_obs = self.obs_decoder(latent_sample)
-            latent_list.append(latent_sample.detach().numpy())
-            recons_list.append(recon_obs.detach().numpy())
+            latent_list.append(latent_sample)
+            recons_list.append(recon_obs)
         return latent_list, recons_list
 
 

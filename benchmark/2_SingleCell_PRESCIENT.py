@@ -1,22 +1,24 @@
 '''
 Description:
     Run PRESCIENT on single-cell data.
-'''
-import torch
-import numpy as np
-import pandas as pd
-import pickle as pkl
-import sklearn
-import umap
-from datetime import datetime
 
+Author:
+    Jiaqi Zhang <jiaqi_zhang2@brown.edu>
+'''
+import numpy as np
+from datetime import datetime
+import torch
 import sys
 sys.path.append("../")
-from plotting.visualization import plotUMAP, plotPredAllTime, plotPredTestTime, umapWithoutPCA, umapWithPCA
-from benchmark.Compare_SingleCell_Predictions import basicStats, globalEvaluation
+sys.path.append("../baseline/")
+sys.path.append("../baseline/prescient_model/")
+sys.path.append("../baseline/prescient_model/prescient")
+from plotting.visualization import plotPredAllTime, plotPredTestTime
+from plotting.PlottingUtils import umapWithPCA
+from benchmark.Compare_SingleCell_Predictions import globalEvaluation
 from benchmark.BenchmarkUtils import loadSCData, tpSplitInd, tunedPRESCIENTPars
-from prescient_model.process_data import main as prepare_data
-from prescient_model.running import prescientTrain, prescientSimulate
+from baseline.prescient_model.process_data import main as prepare_data
+from baseline.prescient_model.running import prescientTrain, prescientSimulate
 
 timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
 
@@ -24,7 +26,7 @@ timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
 
 # Load data
 print("=" * 70)
-data_name= "wot" #zebrafish, mammalian, drosophila, wot, pancreatic, embryoid
+data_name= "zebrafish" # zebrafish, mammalian, drosophila, wot, pancreatic, embryoid
 print("[ {} ]".format(data_name).center(60))
 split_type = "three_interpolation"  # three_interpolation, three_forecasting, one_interpolation, one_forecasting
 print("Split type: {}".format(split_type))
@@ -40,7 +42,7 @@ cell_tps = (processed_data.obs["tp"].values - 1.0).astype(int)
 cell_types = np.repeat("NAN", processed_data.shape[0])
 genes = processed_data.var.index.values
 
-# Parameter settings
+# Use tuned hyperparameters
 k_dim, layers, sd, tau, clip = tunedPRESCIENTPars(data_name, split_type)
 
 # PCA and construct data dict
@@ -77,49 +79,47 @@ sim_tp_latent = [sim_data[int(t * 10)] for t in range(len(all_tps))]  # dt=0.1 i
 sim_tp_recon = [scaler.inverse_transform(pca.inverse_transform(each)) for each in sim_tp_latent]
 
 # ======================================================
-# Save results
-res_filename="../res/single_cell/experimental/{}/{}-{}-PRESCIENT-res.npy".format(data_name, data_name, split_type)
-print("Saving to {}".format(res_filename))
-res_dict = {
-    "true": [ann_data.X[(ann_data.obs["tp"].values - 1.0) == t] for t in range(len(all_tps))],
-    "pred": sim_tp_recon,
-    "latent_seq": sim_tp_latent,
-    "tps": {"all": all_tps, "train": train_tps, "test": test_tps},
-    }
-res_dict["true_pca"] = [pca.transform(scaler.transform(each)) for each in res_dict["true"]]
-np.save(res_filename, res_dict, allow_pickle=True)
+# Visualization - 2D UMAP embeddings
+traj_data = [ann_data.X[(ann_data.obs["tp"].values - 1.0) == t] for t in range(len(all_tps))]
+all_recon_obs = sim_tp_recon
+print("Compare true and reconstructed data...")
+true_data = traj_data
+true_cell_tps = np.concatenate([np.repeat(t, each.shape[0]) for t, each in enumerate(true_data)])
+pred_cell_tps = np.concatenate([np.repeat(t, all_recon_obs[t].shape[0]) for t in range(len(all_recon_obs))])
+reorder_pred_data = all_recon_obs
 
-# save model and config
-model_dir="../res/single_cell/experimental/{}/{}-{}-PRESCIENT-state_dict.pt".format(data_name, data_name, split_type)
-config_dir="../res/single_cell/experimental/{}/{}-{}-PRESCIENT-config.pt".format(data_name, data_name, split_type)
-torch.save(best_state_dict['model_state_dict'], model_dir)
-torch.save(config.__dict__, config_dir)
+true_umap_traj, umap_model, pca_model = umapWithPCA(np.concatenate(true_data, axis=0), n_neighbors=50, min_dist=0.1, pca_pcs=50)
+pred_umap_traj = umap_model.transform(pca_model.transform(np.concatenate(reorder_pred_data, axis=0)))
 
+plotPredAllTime(true_umap_traj, pred_umap_traj, true_cell_tps, pred_cell_tps)
+plotPredTestTime(true_umap_traj, pred_umap_traj, true_cell_tps, pred_cell_tps, test_tps)
+
+# Compute evaluation metrics
+print("Compute metrics...")
+test_tps_list = [int(t) for t in test_tps]
+for t in test_tps_list:
+    print("-" * 70)
+    print("t = {}".format(t))
+    # -----
+    pred_global_metric = globalEvaluation(traj_data[t], reorder_pred_data[t])
+    print(pred_global_metric)
 
 # # ======================================================
-# # Visualization
-# traj_data = res_dict["true"]
-# all_recon_obs = res_dict["pred"]
-# print("Compare true and reconstructed data...")
-# true_data = traj_data
-# true_cell_tps = np.concatenate([np.repeat(t, each.shape[0]) for t, each in enumerate(true_data)])
-# pred_cell_tps = np.concatenate([np.repeat(t, all_recon_obs[t].shape[0]) for t in range(len(all_recon_obs))])
-# reorder_pred_data = all_recon_obs
+# # Save results
+# save_dir = "../res/single_cell/experimental/{}".format(data_name)
+# res_filename="{}/{}-{}-PRESCIENT-res.npy".format(save_dir, data_name, split_type)
+# print("Saving to {}".format(res_filename))
+# res_dict = {
+#     "true": [ann_data.X[(ann_data.obs["tp"].values - 1.0) == t] for t in range(len(all_tps))],
+#     "pred": sim_tp_recon,
+#     "latent_seq": sim_tp_latent,
+#     "tps": {"all": all_tps, "train": train_tps, "test": test_tps},
+#     }
+# res_dict["true_pca"] = [pca.transform(scaler.transform(each)) for each in res_dict["true"]]
+# np.save(res_filename, res_dict, allow_pickle=True)
 #
-# true_umap_traj, umap_model, pca_model = umapWithPCA(np.concatenate(true_data, axis=0), n_neighbors=50, min_dist=0.1, pca_pcs=50)
-# pred_umap_traj = umap_model.transform(pca_model.transform(np.concatenate(reorder_pred_data, axis=0)))
-#
-# plotUMAPTimePoint(true_umap_traj, pred_umap_traj, true_cell_tps, pred_cell_tps)
-# plotUMAPTestTime(true_umap_traj, pred_umap_traj, true_cell_tps, pred_cell_tps, test_tps)
-#
-# # Compute metric for testing time points
-# print("Compute metrics...")
-# test_tps_list = [int(t) for t in test_tps]
-# for t in test_tps_list:
-#     print("-" * 70)
-#     print("t = {}".format(t))
-#     # -----
-#     pred_global_metric = globalEvaluation(traj_data[t], reorder_pred_data[t])
-#     print(pred_global_metric)
-
-
+# # save model and config
+# model_dir="{}/{}-{}-PRESCIENT-state_dict.pt".format(save_dir, data_name, split_type)
+# config_dir="/{}/{}-{}-PRESCIENT-config.pt".format(save_dir, data_name, split_type)
+# torch.save(best_state_dict['model_state_dict'], model_dir)
+# torch.save(config.__dict__, config_dir)

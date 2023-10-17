@@ -1,31 +1,31 @@
 '''
 Description:
-    Compute time costs for PRESCIENT.
+    Compute time cost for PRESCIENT on the zebrafish (interpolation) data.
+
+Author:
+    Jiaqi Zhang <jiaqi_zhang2@brown.edu>
 '''
-import torch
 import numpy as np
-import pandas as pd
-import pickle as pkl
-import sklearn
-import umap
 from datetime import datetime
 import matplotlib.pyplot as plt
 
-from plotting.visualization import plotUMAP, plotPredAllTime, plotPredTestTime, umapWithoutPCA, umapWithPCA
-from benchmark.Compare_SingleCell_Predictions import basicStats, globalEvaluation
+import sys
+sys.path.append("../")
+sys.path.append("../baseline/")
+sys.path.append("../baseline/prescient_model/")
+sys.path.append("../baseline/prescient_model/prescient")
 from benchmark.BenchmarkUtils import loadSCData, tpSplitInd, tunedPRESCIENTPars
-from prescient_model.process_data import main as prepare_data
-from prescient_model.running import prescientTrainWithTimer, prescientSimulate
+from baseline.prescient_model.process_data import main as prepare_data
+from baseline.prescient_model.running import prescientTrainWithTimer
 
 timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
 
 # ======================================================
-
 # Load data
 print("=" * 70)
-data_name= "zebrafish" #zebrafish, mammalian, drosophila, wot, pancreatic, embryoid
+data_name= "zebrafish"
 print("[ {} ]".format(data_name).center(60))
-split_type = "three_forecasting"  # three_interpolation, three_forecasting, one_interpolation, one_forecasting
+split_type = "three_interpolation"
 print("Split type: {}".format(split_type))
 ann_data, cell_tps, cell_types, n_genes, n_tps = loadSCData(data_name, split_type)
 train_tps, test_tps = tpSplitInd(data_name, split_type)
@@ -70,17 +70,19 @@ pretrain_time, iter_time, iter_metric = prescientTrainWithTimer(
 time_list = np.cumsum(iter_time) + pretrain_time
 time_ot = np.asarray(iter_metric).mean(axis=1)
 plt.plot(time_list, time_ot)
+plt.xlabel("Iteration")
+plt.ylabel("Wasserstein")
 plt.tight_layout()
 plt.show()
 
-# -----
-print("Saving results...")
-np.save(
-    "../res/time_cost/{}-{}-PRESCIENT-time_cost.npy".format(data_name, split_type),
-    {
-        "pretrain_time": pretrain_time,
-        "iter_time": iter_time,
-        "iter_metric": iter_metric,
-    },
-    allow_pickle=True
-)
+# # -----
+# print("Saving results...")
+# np.save(
+#     "../res/time_cost/{}-{}-PRESCIENT-time_cost.npy".format(data_name, split_type),
+#     {
+#         "pretrain_time": pretrain_time,
+#         "iter_time": iter_time,
+#         "iter_metric": iter_metric,
+#     },
+#     allow_pickle=True
+# )

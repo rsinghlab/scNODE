@@ -15,7 +15,7 @@ sys.path.append("../baseline/prescient_model/")
 sys.path.append("../baseline/prescient_model/prescient")
 from plotting.visualization import plotPredAllTime, plotPredTestTime
 from plotting.PlottingUtils import umapWithPCA
-from benchmark.Compare_SingleCell_Predictions import globalEvaluation
+from plotting.Compare_SingleCell_Predictions import globalEvaluation
 from benchmark.BenchmarkUtils import loadSCData, tpSplitInd, tunedPRESCIENTPars
 from baseline.prescient_model.process_data import main as prepare_data
 from baseline.prescient_model.running import prescientTrain, prescientSimulate

@@ -13,7 +13,7 @@ from baseline.TrajectoryNet_model.running import TrajectoryNetTrain, TrajectoryN
 from benchmark.BenchmarkUtils import tunedTrjectoryNetPars
 from plotting.visualization import plotPredAllTime, plotPredTestTime
 from plotting.PlottingUtils import umapWithPCA
-from benchmark.Compare_SingleCell_Predictions import globalEvaluation
+from plotting.Compare_SingleCell_Predictions import globalEvaluation
 
 # ======================================================
 

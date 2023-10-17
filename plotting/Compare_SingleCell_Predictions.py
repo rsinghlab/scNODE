@@ -1,16 +1,19 @@
 '''
 Description:
-    Compare model predictions.
+    Compare model predictions of six scRNA-seq datasets.
+
+Author:
+    Jiaqi Zhang <jiaqi_zhang2@brown.edu>
 '''
 import copy
-
+import os
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import scanpy
 from plotting.__init__ import *
 from plotting.PlottingUtils import computeVisEmbedding
-from plotting.visualization import compareUMAPTestTime, plotMetricBarHor, plotMetricBarVer, printMetric
+from plotting.visualization import compareUMAPTestTime, plotMetricBar, printMetric
 from optim.evaluation import globalEvaluation, basicStats, LISIScore
 
 # ======================================================
@@ -159,105 +162,97 @@ mdoel_name_dict = {
 inter_model_list = ["latent_ODE_OT_pretrain", "PRESCIENT", "WOT", "TrajectoryNet", "dummy"]
 extra_model_list = ["latent_ODE_OT_pretrain", "PRESCIENT", "dummy"]
 dataset_name_dict = {
-    "embryoid": "EB",
-    "pancreatic": "MP",
-    "zebrafish":"ZF",
-    "mammalian":"MB",
-    "drosophila":"DR",
-    "WOT":"SC"
-} # embryoid body, mouse pancreatic, zebrafish, mouse brain, drosophila, wot
+    "embryoid": "EB", # embryoid body
+    "pancreatic": "MP", # mouse pancreatic
+    "zebrafish":"ZF", # zebrafish
+    "mammalian":"MB", # mouse brain
+    "drosophila":"DR", # drosophila
+    "WOT":"SC" # wot
+}
 dataset_list = ["embryoid", "pancreatic", "zebrafish", "mammalian", "drosophila", "WOT"]
 
 
 if __name__ == '__main__':
-    #TODO: save dir; test all plotting; use pre-computed data for plotting
+    # Specify dataset and task name
     data_name = "zebrafish"  # zebrafish, mammalian, drosophila, WOT, embryoid, pancreatic
     split_type = "three_interpolation"  # three_interpolation, three_forecasting, one_interpolation, one_forecasting, two_forecasting
+    embed_name = "pca_umap"
+    if data_name in ["drosophila"]:
+        embed_name = "umap"
+    embedding_filename = "../../sc_Dynamic_Modelling/res/low_dim/{}-{}-{}.npy".format(data_name, split_type, embed_name)
     print("[ {}-{} ] Compare Predictions".format(data_name, split_type))
-    # model_list = ["latent_ODE_OT_pretrain", "PRESCIENT", "WOT", "dummy", "FNN", "TrajectoryNet"]
     if split_type == "three_interpolation":
-        # model_list = ["latent_ODE_OT_pretrain", "PRESCIENT", "WOT", "FNN", "dummy"]
         model_list = ["latent_ODE_OT_pretrain", "PRESCIENT", "WOT", "dummy"]
     elif split_type == "three_forecasting":
-        # model_list = ["latent_ODE_OT_pretrain", "PRESCIENT", "FNN", "dummy"]
         model_list = ["latent_ODE_OT_pretrain", "PRESCIENT", "dummy"]
     elif split_type == "one_forecasting":
-        # model_list = ["latent_ODE_OT_pretrain", "PRESCIENT", "FNN", "dummy"]
         model_list = ["latent_ODE_OT_pretrain", "PRESCIENT", "dummy"]
     elif split_type == "one_interpolation":
-        # model_list = ["latent_ODE_OT_pretrain", "PRESCIENT", "WOT", "TrajectoryNet", "FNN", "dummy"]
         model_list = ["latent_ODE_OT_pretrain", "PRESCIENT", "WOT", "TrajectoryNet", "dummy"]
     elif split_type == "two_forecasting":
-        # model_list = ["latent_ODE_OT_pretrain", "PRESCIENT", "FNN", "dummy"]
         model_list = ["latent_ODE_OT_pretrain", "PRESCIENT", "dummy"]
-    print("Loading data...")
-    model_true_data, model_pred_data, tps, test_tps = loadModelPrediction(data_name, split_type, model_list)
-    true_cell_tps = np.concatenate([np.repeat(t, each.shape[0]) for t, each in enumerate(model_true_data)])
-    model_cell_tps = [
-        np.concatenate([np.repeat(t, m_pred[t].shape[0]) for t in range(len(m_pred))])
-        for m_pred in model_pred_data
-    ]
-    # # ----
-    # embed_name = "pca_umap" # pca, phate, umap, pca_umap
-    # if data_name in ["drosophila"]:
-    #     embed_name = "umap"
-    # print("Computing {} embeddings...".format(embed_name))
-    # true_umap_traj, model_pred_umap_traj = computeVisEmbedding(model_true_data, model_pred_data, embed_name=embed_name)
-    # np.save(
-    #     "../res/low_dim/{}-{}-{}.npy".format(data_name, split_type, embed_name),
-    #     {
-    #         "true": true_umap_traj,
-    #         "pred": model_pred_umap_traj,
-    #         "model": model_list,
-    #         "embed_name": embed_name,
-    #         "true_cell_tps": true_cell_tps,
-    #         "model_cell_tps": model_cell_tps,
-    #         "test_tps": test_tps,
-    #     }
-    # )
+    # ============================
+    if not os.path.isfile(embedding_filename):
+        # Load predictions and compute embedding
+        print("Loading data...")
+        model_true_data, model_pred_data, tps, test_tps = loadModelPrediction(data_name, split_type, model_list)
+        true_cell_tps = np.concatenate([np.repeat(t, each.shape[0]) for t, each in enumerate(model_true_data)])
+        model_cell_tps = [
+            np.concatenate([np.repeat(t, m_pred[t].shape[0]) for t in range(len(m_pred))])
+            for m_pred in model_pred_data
+        ]
+        # Compute embeddings and save results
+        print("Computing {} embeddings...".format(embed_name))
+        true_umap_traj, model_pred_umap_traj = computeVisEmbedding(model_true_data, model_pred_data, embed_name=embed_name)
+        np.save(
+            embedding_filename,
+            {
+                "true": true_umap_traj,
+                "pred": model_pred_umap_traj,
+                "model": model_list,
+                "embed_name": embed_name,
+                "true_cell_tps": true_cell_tps,
+                "model_cell_tps": model_cell_tps,
+                "test_tps": test_tps,
+            }
+        )
     # ----
-    # res = np.load("../res/low_dim/zebrafish-three_interpolation-pca_umap.npy", allow_pickle=True).item()
-    # true_umap_traj = res["true"]
-    # model_pred_umap_traj = res["pred"]
-    # model_list = res["model"]
-    # embed_name = res["embed_name"]
-    # true_cell_tps = res["true_cell_tps"]
-    # model_cell_tps = res["model_cell_tps"]
-    # test_tps = res["test_tps"]
-    # print("Visualization")
-    # compareUMAPTestTime(true_umap_traj, model_pred_umap_traj, true_cell_tps, model_cell_tps, test_tps, model_list)
-    # # -----
-    # n_sim_cells = 2000
-    # test_eval_metric, basic_stats = computeMetric(model_true_data, model_pred_data, tps, test_tps, model_list, n_sim_cells)
-    # np.save("../res/comparison/{}-{}-model_metrics.npy".format(data_name, split_type), test_eval_metric)
-    # np.save("../res/comparison/{}-{}-model_basic_stats.npy".format(data_name, split_type), basic_stats)
+    # Compare 2D UMAP
+    res = np.load(embedding_filename, allow_pickle=True).item()
+    true_umap_traj = res["true"]
+    model_pred_umap_traj = res["pred"]
+    model_list = res["model"]
+    embed_name = res["embed_name"]
+    true_cell_tps = res["true_cell_tps"]
+    model_cell_tps = res["model_cell_tps"]
+    test_tps = res["test_tps"]
+    print("Visualization")
+    compareUMAPTestTime(
+        true_umap_traj, model_pred_umap_traj, true_cell_tps, model_cell_tps, test_tps, model_list,
+        mdoel_name_dict, data_name, split_type, embed_name, save_dir="./"
+    )
+    # ============================
+    metric_filename = "../../sc_Dynamic_Modelling/res/comparison/{}-{}-model_metrics.npy".format(data_name, split_type)
+    n_sim_cells = 2000
+    if not os.path.isfile(metric_filename):
+        # Load predictions and compute evaluation metrics
+        model_true_data, model_pred_data, tps, test_tps = loadModelPrediction(data_name, split_type, model_list)
+        true_cell_tps = np.concatenate([np.repeat(t, each.shape[0]) for t, each in enumerate(model_true_data)])
+        model_cell_tps = [
+            np.concatenate([np.repeat(t, m_pred[t].shape[0]) for t in range(len(m_pred))])
+            for m_pred in model_pred_data
+        ]
+        test_eval_metric, basic_stats = computeMetric(model_true_data, model_pred_data, tps, test_tps, model_list, n_sim_cells)
+        np.save("../../sc_Dynamic_Modelling/res/comparison/{}-{}-model_metrics.npy".format(data_name, split_type), test_eval_metric)
     # -----
-    # plotMetricBar()
-    # plotMetricBarHor()
-    # -----
-    # Load metrics
-    data_name = "WOT"  # zebrafish, mammalian, WOT, drosophila, Weinreb, embryoid, pancreatic
-    split_type = "three_forecasting"  # three_interpolation, three_forecasting, one_interpolation, one_forecasting
-    metric_filename = "../res/comparison/{}-{}-model_metrics.npy".format(data_name, split_type)
-    stats_filename = "../res/comparison/{}-{}-model_basic_stats.npy".format(data_name, split_type)
     metric_dict = np.load(metric_filename, allow_pickle=True).item()
-    stats_dict = np.load(stats_filename, allow_pickle=True).item()
-    if split_type == "three_interpolation":
-        model_list = ["latent_ODE_OT_pretrain", "PRESCIENT", "WOT", "FNN", "dummy"]
-    elif split_type == "three_forecasting":
-        model_list = ["latent_ODE_OT_pretrain", "PRESCIENT", "FNN", "dummy"]
-    elif split_type == "one_forecasting":
-        model_list = ["latent_ODE_OT_pretrain", "PRESCIENT", "FNN", "dummy"]
-    elif split_type == "one_interpolation":
-        model_list = ["latent_ODE_OT_pretrain", "PRESCIENT", "WOT", "TrajectoryNet", "FNN", "dummy"]
-    elif split_type == "two_forecasting":
-        model_list = ["latent_ODE_OT_pretrain", "PRESCIENT", "FNN", "dummy"]
     test_tps = list(metric_dict.keys())
     n_test_tps = len(test_tps)
     column_names = [("t", t) for t in test_tps]
-
-    # Compare pair-wise L2 dist and OT
+    # Compare pair-wise L2 dist and Wasserstein distance (OT)
     model_l2 = [[metric_dict[t][m]["global"]["l2"] for t in test_tps] for m in model_list]
     model_ot = [[metric_dict[t][m]["global"]["ot"] for t in test_tps] for m in model_list]
     printMetric(model_l2, model_ot, model_list, column_names)
+    plotMetricBar("../../sc_Dynamic_Modelling/res/comparison", dataset_list, inter_model_list, extra_model_list, dataset_name_dict, mdoel_name_dict, save_dir="")
+
 

@@ -1,6 +1,9 @@
 '''
 Description:
-    Compute time cost for our model.
+    Compute time cost for our model on the zebrafish (interpolation) data.
+
+Author:
+    Jiaqi Zhang <jiaqi_zhang2@brown.edu>
 '''
 
 import matplotlib.pyplot as plt
@@ -10,9 +13,7 @@ from tqdm import tqdm
 import itertools
 import time
 
-from benchmark.BenchmarkUtils import loadSCData, tpSplitInd, tunedOurPars
-from data.preprocessing import splitBySpec
-from benchmark.BenchmarkUtils import sampleOT
+from benchmark.BenchmarkUtils import loadSCData, tpSplitInd, tunedOurPars, sampleOT, splitBySpec
 from optim.running import constructscNODEModel, scNODEPredict
 from benchmark.BenchmarkUtils import sampleGaussian
 from optim.loss_func import SinkhornLoss, MSELoss
@@ -20,9 +21,9 @@ from optim.loss_func import SinkhornLoss, MSELoss
 # ======================================================
 # Load data and pre-processing
 print("=" * 70)
-data_name = "zebrafish"  # zebrafish, mammalian, drosophila, wot, pancreatic, embryoid
+data_name = "zebrafish"
 print("[ {} ]".format(data_name).center(60))
-split_type = "three_forecasting"  # three_interpolation, three_forecasting, one_interpolation, one_forecasting
+split_type = "three_interpolation"
 print("Split type: {}".format(split_type))
 ann_data, cell_tps, cell_types, n_genes, n_tps = loadSCData(data_name, split_type)
 train_tps, test_tps = tpSplitInd(data_name, split_type)
@@ -48,11 +49,11 @@ print("Test tps={}".format(test_tps))
 
 # ======================================================
 # Construct model
-pretrain_iters = 200 # 200
+pretrain_iters = 200
 pretrain_lr = 1e-3
 latent_coeff = 1.0
 epochs = 1 # 10
-iters = 1000 # 100
+iters = 1000
 batch_size = 32
 lr = 1e-3
 act_name = "relu"
@@ -92,7 +93,7 @@ if pretrain_iters > 0:
     pretrain_end = time.perf_counter()
 pretrain_time = pretrain_end - pretrain_start
 
-# Dynamic learning
+# Model training
 latent_ode_model.latent_encoder = latent_encoder
 latent_ode_model.obs_decoder = obs_decoder
 num_IWAE_sample = 1
@@ -104,7 +105,6 @@ latent_ode_model.train()
 
 iter_time = []
 iter_metric = []
-
 for e in range(epochs):
     epoch_pbar = tqdm(range(iters), desc="[ Epoch {} ]".format(e + 1))
     for t in epoch_pbar:
@@ -112,12 +112,12 @@ for e in range(epochs):
         iter_start = time.perf_counter()
         optimizer.zero_grad()
         recon_obs, first_latent_dist, first_time_true_batch, latent_seq = latent_ode_model(
-            train_data, train_tps, num_IWAE_sample, batch_size=batch_size)
+            train_data, train_tps, batch_size=batch_size)
         encoder_latent_seq = [
-            latent_ode_model.singleReconstruct(
-                each[np.random.choice(np.arange(each.shape[0]), size=batch_size, replace=(each.shape[0] < batch_size)),
-                :]
-            )[1]
+            latent_ode_model.vaeReconstruct(
+                [each[np.random.choice(np.arange(each.shape[0]), size=batch_size, replace=(each.shape[0] < batch_size)),
+                 :]]
+            )[0][0]
             for each in train_data
         ]
         # -----
@@ -134,8 +134,8 @@ for e in range(epochs):
         iter_end = time.perf_counter()
         # -----
         latent_ode_model.eval()
-        recon_obs, first_latent_dist, _, latent_seq = latent_ode_model(train_data, train_tps, num_IWAE_sample, batch_size=None)
-        all_recon_obs = scNODEPredict(latent_ode_model, first_latent_dist, tps, n_cells=n_sim_cells)
+        recon_obs, first_latent_dist, _, latent_seq = latent_ode_model(train_data, train_tps, batch_size=None)
+        all_recon_obs = scNODEPredict(latent_ode_model, train_data[0], tps, n_cells=n_sim_cells)
         all_recon_obs = [all_recon_obs[:, t, :] for t in range(all_recon_obs.shape[1])]
         t_global_metric = [sampleOT(traj_data[t].detach().numpy(), all_recon_obs[t], sample_n=100, sample_T=10) for t in test_tps_list]
         iter_metric.append(t_global_metric)
@@ -145,17 +145,19 @@ for e in range(epochs):
 time_list = np.cumsum(iter_time) + pretrain_time
 time_ot = np.asarray(iter_metric).mean(axis=1)
 plt.plot(time_list, time_ot)
+plt.xlabel("Iteration")
+plt.ylabel("Wasserstein")
 plt.tight_layout()
 plt.show()
 
-# -----
-print("Saving results...")
-np.save(
-    "../res/time_cost/{}-{}-latent_ODE_OT_pretrain-time_cost.npy".format(data_name, split_type),
-    {
-        "pretrain_time": pretrain_time,
-        "iter_time": iter_time,
-        "iter_metric": iter_metric,
-    },
-    allow_pickle=True
-)
+# # -----
+# print("Saving results...")
+# np.save(
+#     "../res/time_cost/{}-{}-latent_ODE_OT_pretrain-time_cost.npy".format(data_name, split_type),
+#     {
+#         "pretrain_time": pretrain_time,
+#         "iter_time": iter_time,
+#         "iter_metric": iter_metric,
+#     },
+#     allow_pickle=True
+# )

@@ -1,6 +1,9 @@
 '''
 Description:
-    Augmenting data to improve age prediction.
+    Use scNODE predictions to recover smooth trajectories.
+
+Author:
+    Jiaqi Zhang <jiaqi_zhang2@brown.edu>
 '''
 
 import scanpy
@@ -15,13 +18,14 @@ from plotting.__init__ import *
 
 # ======================================================
 
+# Hyperparameter setting
 latent_dim = 50
 drift_latent_size = [50]
 enc_latent_list = [50]
 dec_latent_list = [50]
 act_name = "relu"
 
-def augmentation(train_data, train_tps, tps, n_sim_cells):
+def prediction(train_data, train_tps, tps, n_sim_cells):
     pretrain_iters = 200
     pretrain_lr = 1e-3
     latent_coeff = 1.0
@@ -35,17 +39,11 @@ def augmentation(train_data, train_tps, tps, n_sim_cells):
         latent_enc_act="none", latent_dec_act=act_name, drift_act=act_name,
         ode_method="euler"
     )
-    latent_ode_model, loss_list, recon_obs, first_latent_dist, latent_seq = scNODETrainWithPreTrain(train_data,
-                                                                                                    train_tps,
-                                                                                                    latent_ode_model,
-                                                                                                    latent_coeff=latent_coeff,
-                                                                                                    epochs=epochs,
-                                                                                                    iters=iters,
-                                                                                                    batch_size=batch_size,
-                                                                                                    lr=lr,
-                                                                                                    pretrain_iters=pretrain_iters,
-                                                                                                    pretrain_lr=pretrain_lr)
-    all_recon_obs = scNODEPredict(latent_ode_model, first_latent_dist, tps, n_cells=n_sim_cells)  # (# trajs, # tps, # genes)
+    latent_ode_model, loss_list, recon_obs, first_latent_dist, latent_seq = scNODETrainWithPreTrain(
+        train_data, train_tps, latent_ode_model, latent_coeff=latent_coeff, epochs=epochs, iters=iters,
+        batch_size=batch_size, lr=lr, pretrain_iters=pretrain_iters, pretrain_lr=pretrain_lr
+    )
+    all_recon_obs = scNODEPredict(latent_ode_model, train_data[0], tps, n_cells=n_sim_cells)  # (# cells, # tps, # genes)
     return latent_ode_model, all_recon_obs
 
 
@@ -96,7 +94,7 @@ def recoverTraj(traj_data, traj_cell_types):
     # pred_tps = torch.FloatTensor([i for i in all_tps if i not in use_tps])
     # pred_tps = tps
     pred_tps = torch.FloatTensor([0, 1, 2, 3, 4, 4.25, 4.5, 4.75, 5, 6, 6.25, 6.5, 6.75, 7, 8, 8.25, 8.5, 8.75, 9, 10, 11])
-    latent_ode_model, all_recon_obs = augmentation(train_data, train_tps, pred_tps, n_sim_cells=300)
+    latent_ode_model, all_recon_obs = prediction(train_data, train_tps, pred_tps, n_sim_cells=300)
     # aug_traj_data = copy.deepcopy(traj_data)
     # for idx, i in enumerate([4, 6, 8]):
     #     pred_idx = list(pred_tps.detach().numpy()).index(i)

@@ -12,7 +12,7 @@ from benchmark.BenchmarkUtils import loadSCData, tpSplitInd
 from plotting.visualization import plotPredAllTime, plotPredTestTime
 from plotting.PlottingUtils import umapWithPCA
 from benchmark.BenchmarkUtils import splitBySpec
-from benchmark.Compare_SingleCell_Predictions import globalEvaluation
+from plotting.Compare_SingleCell_Predictions import globalEvaluation
 from optim.running import constructDummyModel, dummySimulate
 
 # ======================================================

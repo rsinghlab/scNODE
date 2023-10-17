@@ -8,11 +8,9 @@ Author:
 import torch
 import numpy as np
 
-from model.layer import LinearNet, LinearVAENet
-from benchmark.Compare_SingleCell_Predictions import globalEvaluation
+from plotting.Compare_SingleCell_Predictions import globalEvaluation
 from benchmark.BenchmarkUtils import loadSCData, tpSplitInd, splitBySpec
 from optim.running import constructscNODEModel, scNODETrainWithPreTrain, scNODEPredict
-from plotting.__init__ import *
 
 # ======================================================
 
@@ -70,15 +68,6 @@ def runExp():
         enc_latent_list = None
         dec_latent_list = None
         drift_latent_size = None
-
-        latent_encoder = LinearVAENet(
-            input_dim=n_genes, latent_size_list=enc_latent_list, output_dim=latent_dim, act_name=latent_enc_act
-        )  # encoder
-        obs_decoder = LinearNet(
-            input_dim=latent_dim, latent_size_list=dec_latent_list, output_dim=n_genes, act_name=latent_dec_act
-        )  # decoder
-        print(latent_encoder)
-        print(obs_decoder)
         # Model running
         latent_ode_model = constructscNODEModel(
             n_genes, latent_dim=latent_dim,
@@ -120,45 +109,5 @@ def runExp():
     )
 
 
-def evaluateExp():
-    # Load data and pre-processing
-    print("=" * 70)
-    data_name = "zebrafish"  # zebrafish, mammalian, drosophila, wot
-    print("[ {} ]".format(data_name).center(60))
-    split_type = "three_interpolation"  # interpolation
-    print("Split type: {}".format(split_type))
-    ann_data, cell_tps, cell_types, n_genes, n_tps = loadSCData(data_name, split_type)
-    data = ann_data.X
-    traj_data = [data[np.where(cell_tps == t)[0], :] for t in range(1, n_tps + 1)]  # (# tps, # cells, # genes)
-    cell_num_list = [each.shape[0] for each in traj_data]
-    # -----
-    exp_res = np.load("../res/model_design/{}-{}-performance_vs_latent_size.npy".format(data_name, split_type), allow_pickle=True).item()
-    train_tps, test_tps = tpSplitInd(data_name, split_type)
-    latent_size_list = exp_res["latent_size"]
-    # -----
-    ot_list = exp_res["ot"]
-    avg_ot_list = np.mean(ot_list, axis=1)
-    l2_list = exp_res["l2"]
-    avg_l2_list = np.mean(l2_list, axis=1)
-    print("OT ", avg_ot_list)
-    print("Avg={}, std={}".format(np.mean(avg_ot_list), np.std(avg_ot_list)))
-    print("L2 ", avg_l2_list)
-    print("Avg={}, std={}".format(np.mean(avg_l2_list), np.std(avg_l2_list)))
-    plt.figure(figsize=(8, 4))
-    plt.subplot(2, 1, 1)
-    plt.bar(np.arange(len(avg_ot_list)), avg_ot_list, color=white_color, edgecolor="k", linewidth=2.0, capsize=5.0)
-    plt.xticks([], [])
-    plt.ylabel("OT")
-    plt.subplot(2, 1, 2)
-    plt.bar(np.arange(len(avg_l2_list)), avg_l2_list, color=white_color, edgecolor="k", linewidth=2.0, capsize=5.0)
-    plt.ylabel("L2")
-    plt.xlabel("Latent Size")
-    plt.xticks(np.arange(len(latent_size_list)), ["{:d}".format(x) for x in latent_size_list])
-    plt.tight_layout()
-    plt.show()
-
-
 if __name__ == '__main__':
     runExp()
-    evaluateExp()
-    pass

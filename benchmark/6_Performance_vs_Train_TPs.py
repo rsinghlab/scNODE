@@ -10,9 +10,7 @@ import numpy as np
 
 from benchmark.BenchmarkUtils import loadSCData, splitBySpec
 from optim.running import constructscNODEModel, scNODETrainWithPreTrain, scNODEPredict
-from plotting import _removeTopRightBorders
 from optim.evaluation import globalEvaluation
-from plotting.__init__ import *
 
 # ======================================================
 
@@ -135,66 +133,5 @@ def runExp():
     )
 
 
-def evaluateExp():
-    # Load data and pre-processing
-    print("=" * 70)
-    data_name = "zebrafish"  # zebrafish, mammalian, drosophila
-    print("[ {} ]".format(data_name).center(60))
-    split_type = "first_five"  # interpolation, forecasting
-    print("Split type: {}".format(split_type))
-    ann_data, cell_tps, cell_types, n_genes, n_tps = loadSCData(data_name, split_type)
-    data = ann_data.X
-    traj_data = [data[np.where(cell_tps == t)[0], :] for t in range(1, n_tps + 1)]  # (# tps, # cells, # genes)
-    cell_num_list = [each.shape[0] for each in traj_data]
-    # -----
-    exp_res = np.load("../res/model_design/{}-{}-performance_vs_train_tps.npy".format(data_name, split_type), allow_pickle=True).item()
-    pred_list = exp_res["pred"]
-    tp_split_list = exp_res["tp"]
-    n_tps = len(tp_split_list[0][0]) + len(tp_split_list[0][1])
-    # -----------------------
-    ot_list = exp_res["ot"]
-    l2_list = exp_res["l2"]
-    tp_split_list = exp_res["tp"]
-    n_tps = len(tp_split_list[0][0]) + len(tp_split_list[0][1])
-    max_num_test_tps = len(tp_split_list[0][1])
-    min_num_train_tps = len(tp_split_list[0][0])
-    for i in range(len(l2_list)):
-        l2_list[i] = l2_list[i] + [np.nan for _ in range(max_num_test_tps - len(l2_list[i]))]
-    for i in range(len(ot_list)):
-        ot_list[i] = ot_list[i] + [np.nan for _ in range(max_num_test_tps - len(ot_list[i]))]
-
-    ot_list = np.asarray(ot_list)
-    l2_list = np.asarray(l2_list)
-    tr_ot_list = [ot_list[:, i][~np.isnan(ot_list[:, i])] for i in range(ot_list.shape[1])]
-    tr_l2_list = [l2_list[:, i][~np.isnan(l2_list[:, i])] for i in range(l2_list.shape[1])]
-
-    plt.figure(figsize=(12, 3))
-    plt.subplot(1, 2, 1)
-    plt.boxplot(
-        tr_ot_list, positions=np.arange(len(tr_ot_list)),
-        showfliers=False, widths=0.7,
-        medianprops=dict(linewidth=0), boxprops=dict(linewidth=1.5), capprops=dict(linewidth=1.5)
-    )
-    sbn.stripplot(data=tr_ot_list, palette=[BlueRed_12.mpl_colors[0]], size=8, edgecolor="k", linewidth=1)
-    plt.xlabel("Next TP")
-    plt.xticks(range(len(tr_ot_list)), range(1, len(tr_ot_list) + 1))
-    plt.ylabel("Wasserstein")
-    _removeTopRightBorders()
-    plt.subplot(1, 2, 2)
-    plt.boxplot(
-        tr_l2_list, positions=np.arange(len(tr_l2_list)),
-        showfliers=False, widths=0.7,
-        medianprops=dict(linewidth=0), boxprops=dict(linewidth=1.5), capprops=dict(linewidth=1.5)
-    )
-    sbn.stripplot(data=tr_l2_list, palette=[BlueRed_12.mpl_colors[0]], size=8, edgecolor="k", linewidth=1)
-    plt.ylabel("L2")
-    plt.xlabel("Next TP")
-    plt.xticks(range(len(tr_l2_list)), range(1, len(tr_l2_list)+1))
-    _removeTopRightBorders()
-    plt.tight_layout()
-    plt.show()
-
-
 if __name__ == '__main__':
     runExp()
-    evaluateExp()

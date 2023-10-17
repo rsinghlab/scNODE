@@ -11,7 +11,7 @@ import numpy as np
 from baseline.wot_model.running import wotSimulate
 from plotting.visualization import plotPredAllTime, plotPredTestTime
 from plotting.PlottingUtils import umapWithPCA
-from benchmark.Compare_SingleCell_Predictions import globalEvaluation
+from plotting.Compare_SingleCell_Predictions import globalEvaluation
 from benchmark.BenchmarkUtils import loadSCData, tpSplitInd, tunedWOTPars
 
 # ======================================================

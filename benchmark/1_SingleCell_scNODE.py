@@ -19,9 +19,19 @@ from optim.evaluation import globalEvaluation
 # ======================================================
 # Load data and pre-processing
 print("=" * 70)
-data_name= "zebrafish" #zebrafish, mammalian, drosophila, wot, pancreatic, embryoid
+# Specify the dataset: zebrafish, mammalian, drosophila, wot, pancreatic, embryoid
+# Representing ZB, MB, DR, SC, MP, and EB, respectively
+data_name= "zebrafish"
 print("[ {} ]".format(data_name).center(60))
-split_type = "three_interpolation"  # three_interpolation, three_forecasting, one_interpolation, one_forecasting
+# Specify the type of prediction tasks: three_interpolation, two_forecasting, three_forecasting, one_interpolation, one_forecasting
+# The tasks feasible for each dataset:
+#   zebrafish (ZB): three_interpolation, two_forecasting
+#   mammalian (MB): three_interpolation, three_forecasting
+#   drosophila (DR): three_interpolation, three_forecasting
+#   wot (SC): three_interpolation, three_forecasting
+#   pancreatic (MP): one_interpolation, one_forecasting
+#   embryoid (EB): one_interpolation, one_forecasting
+split_type = "three_interpolation"
 print("Split type: {}".format(split_type))
 ann_data, cell_tps, cell_types, n_genes, n_tps = loadSCData(data_name, split_type)
 train_tps, test_tps = tpSplitInd(data_name, split_type)

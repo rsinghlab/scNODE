@@ -245,7 +245,7 @@ def plotZebrafishLAP(
     _removeAllBorders()
     plt.legend(loc="center left", bbox_to_anchor=(1.0, 0.5), fontsize=11)
     plt.tight_layout()
-    plt.savefig("../res/figs/zebrafish_lap.pdf")
+    # plt.savefig("../res/figs/zebrafish_lap.pdf")
     plt.show()
 
 
@@ -305,7 +305,7 @@ def plotGeneExpression(umap_latent_data, gene_expr, gene_list, type_name):
         _removeAllBorders(ax_list[i])
     plt.colorbar(sc)
     plt.tight_layout()
-    plt.savefig("../res/figs/{}_key_genes.png".format(type_name), dpi=600)
+    # plt.savefig("../res/figs/{}_key_genes.png".format(type_name), dpi=600)
     plt.show()
 
 # ======================================================
@@ -326,8 +326,8 @@ def perturbationAnalysis(traj_data, traj_cell_types):
     TBX16_perturbed_start[:, TBX16_idx] *= m
     # scNODE prediction based on perturbed data
     n_cells = traj_data[-1].shape[0]
-    SOX3_latent_seq, SOX3_drift_seq, SOX3_recon_obs = _perturbedPredict(latent_ode_model, SOX3_perturbed_start, train_tps, n_cells=n_cells)
-    TBX16_latent_seq, TBX16_drift_seq, TBX16_recon_obs = _perturbedPredict(latent_ode_model, TBX16_perturbed_start, train_tps, n_cells=n_cells)
+    SOX3_recon_obs = _perturbedPredict(latent_ode_model, SOX3_perturbed_start, train_tps, n_cells=n_cells)
+    TBX16_recon_obs = _perturbedPredict(latent_ode_model, TBX16_perturbed_start, train_tps, n_cells=n_cells)
     # Classify predicted cells at the last timepoint
     SOX3_Y = clf_model.predict(SOX3_recon_obs[-1])
     TBX16_Y = clf_model.predict(TBX16_recon_obs[-1])
@@ -349,7 +349,7 @@ def perturbationAnalysis(traj_data, traj_cell_types):
     plt.figure(figsize=(5, 3))
     bottom = np.zeros((len(Y_list),))
     width = 0.7
-    color_list = [Bold_10.mpl_colors[1], gray_color]
+    color_list = [Bold_10.mpl_colors[0], gray_color]
     for c_idx, c in enumerate(["PSM", "other"]):
         plt.bar(np.arange(len(Y_list)), cnt_mat[:, c_idx], width, label=c, bottom=bottom, color=color_list[c_idx])
         bottom += cnt_mat[:, c_idx]
@@ -357,7 +357,7 @@ def perturbationAnalysis(traj_data, traj_cell_types):
     plt.ylim(0.0, 1.0)
     plt.xticks(np.arange(len(Y_list)), cnt_df.index.values)
     _removeTopRightBorders()
-    plt.savefig("../res/figs/PSM_perturbation_cell_ratio.pdf")
+    # plt.savefig("../res/figs/PSM_perturbation_cell_ratio.pdf")
     plt.tight_layout()
     plt.show()
     # -----
@@ -386,7 +386,7 @@ def perturbationAnalysis(traj_data, traj_cell_types):
     plt.ylim(0.0, 1.0)
     plt.xticks(np.arange(len(Y_list)), cnt_df.index.values)
     _removeTopRightBorders()
-    plt.savefig("../res/figs/Hindbrain_perturbation_cell_ratio.pdf")
+    # plt.savefig("../res/figs/Hindbrain_perturbation_cell_ratio.pdf")
     plt.tight_layout()
     plt.show()
 
@@ -402,16 +402,16 @@ def _trainClassifier(X, Y):
 def _perturbedPredict(latent_ode_model, start_data, tps, n_cells):
     latent_ode_model.eval()
     start_data_tensor = torch.FloatTensor(start_data)
-    latent_seq, drift_seq, recon_obs = latent_ode_model.computeDiffLatentDrift([start_data_tensor], tps, n_cells)
-    latent_seq = [latent_seq[:, t, :].detach().numpy() for t in range(latent_seq.shape[1])]
+    # latent_seq, drift_seq, recon_obs = latent_ode_model.computeDiffLatentDrift([start_data_tensor], tps, n_cells)
+    _, _, recon_obs = latent_ode_model.predict(start_data_tensor, tps, n_cells)
     recon_obs = [recon_obs[:, t, :].detach().numpy() for t in range(recon_obs.shape[1])]
-    return latent_seq, drift_seq, recon_obs
+    return recon_obs
 
 
 if __name__ == '__main__':
     # Load data and pre-processing
     print("=" * 70)
-    data_name = "zebrafish"  # zebrafish, mammalian
+    data_name = "zebrafish"
     print("[ {} ]".format(data_name).center(60))
     split_type = "all"  # all
     print("Split type: {}".format(split_type))
@@ -483,7 +483,7 @@ if __name__ == '__main__':
         latent_tp_list = data_res["latent_tp_list"]
         # -----
         # Visualize learned latent space
-        plotLatent(umap_latent_data, umap_latent_data, umap_next_data, color_list = linearSegmentCMap(n_tps, "viridis"))
+        # plotLatent(umap_latent_data, umap_latent_data, umap_next_data, color_list = linearSegmentCMap(n_tps, "viridis"))
         plotLatentCellType(umap_latent_data, umap_latent_data, umap_next_data, traj_cell_types, color_list = Bold_10.mpl_colors)
         # -----
         # Least action path from starting timepoint (t=0) to PSM and Hindbrain cell populations
@@ -537,17 +537,13 @@ if __name__ == '__main__':
         for i, g_name in enumerate(group_id):
             g_gene = [x[i] for x in gene_names]
             marker_gene_dict[g_name] = g_gene
-        np.save(
-            "../res/downstream_analysis/vector_field/Hindbrain_path_marker_genes.npy",
-            marker_gene_dict, allow_pickle=True
-        )
         # -----
         # Plot gene expression of two DE genes on Hindbrain path
         top_hinbrain_genes = ['SOX3', 'SOX19A']
         plotGeneExpression(umap_latent_data, gene_expr=ann_data[:, top_hinbrain_genes].X, gene_list=top_hinbrain_genes, type_name="Hindbrain")
         # Plot gene expression of two DE genes on PSM path
-        top_PSM_genes = ['SOX3', 'TOB1A'] # KNN
+        top_PSM_genes = ['TBX16', 'TOB1A'] # KNN
         plotGeneExpression(umap_latent_data, gene_expr=ann_data[:, top_PSM_genes].X, gene_list=top_PSM_genes, type_name="PSM")
         # ------
         # Perturbation analysis
-        perturbationAnalysis()
+        perturbationAnalysis(traj_data, traj_cell_types)

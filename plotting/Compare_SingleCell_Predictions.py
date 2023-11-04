@@ -155,7 +155,7 @@ mdoel_name_dict = {
     "PRESCIENT": "PRESCIENT",
     "WOT": "WOT",
     "dummy": "Dummy",
-    "FNN": "FNN",
+    # "FNN": "FNN",
     "TrajectoryNet": "TrajectoryNet",
 }
 
@@ -232,7 +232,7 @@ if __name__ == '__main__':
         mdoel_name_dict, data_name, split_type, embed_name, save_dir="./"
     )
     # ============================
-    metric_filename = "../../sc_Dynamic_Modelling/res/comparison/{}-{}-model_metrics.npy".format(data_name, split_type)
+    metric_filename = "../res/comparison/{}-{}-model_metrics.npy".format(data_name, split_type)
     n_sim_cells = 2000
     if not os.path.isfile(metric_filename):
         # Load predictions and compute evaluation metrics
@@ -243,7 +243,7 @@ if __name__ == '__main__':
             for m_pred in model_pred_data
         ]
         test_eval_metric, basic_stats = computeMetric(model_true_data, model_pred_data, tps, test_tps, model_list, n_sim_cells)
-        np.save("../../sc_Dynamic_Modelling/res/comparison/{}-{}-model_metrics.npy".format(data_name, split_type), test_eval_metric)
+        np.save("../res/comparison/{}-{}-model_metrics.npy".format(data_name, split_type), test_eval_metric)
     # -----
     metric_dict = np.load(metric_filename, allow_pickle=True).item()
     test_tps = list(metric_dict.keys())
@@ -253,6 +253,6 @@ if __name__ == '__main__':
     model_l2 = [[metric_dict[t][m]["global"]["l2"] for t in test_tps] for m in model_list]
     model_ot = [[metric_dict[t][m]["global"]["ot"] for t in test_tps] for m in model_list]
     printMetric(model_l2, model_ot, model_list, column_names)
-    plotMetricBar("../../sc_Dynamic_Modelling/res/comparison", dataset_list, inter_model_list, extra_model_list, dataset_name_dict, mdoel_name_dict, save_dir="")
+    plotMetricBar("..//res/comparison", dataset_list, inter_model_list, extra_model_list, dataset_name_dict, mdoel_name_dict, save_dir="")
 
 

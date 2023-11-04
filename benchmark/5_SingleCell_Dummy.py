@@ -1,6 +1,6 @@
 '''
 Description:
-    Run Dummy model on the single-cell dataset.
+    Run Dummy (Naive) model on the single-cell dataset.
 
 Author:
     Jiaqi Zhang <jiaqi_zhang2@brown.edu>

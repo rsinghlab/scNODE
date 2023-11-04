@@ -77,15 +77,16 @@ def recoverTraj(traj_data):
     )
     # -----
     # Remove several timepoints
-    use_tps = [0, 1, 3, 5, 7, 9, 10, 11] # use these timepoints to predict data at t=2, 4, 6
+    use_tps = [0, 1, 3, 5, 7, 9]  # remove_recovery
     print("Used tps {}...".format(use_tps))
     use_traj_data = [traj_data[i] for i in use_tps]
+    use_cell_tps = np.concatenate([np.repeat(use_tps[idx], x.shape[0]) for idx, x in enumerate(use_traj_data)])
     use_umap_traj, use_umap_model, use_pca_model = umapWithPCA(
         np.concatenate(use_traj_data, axis=0), n_neighbors=n_neighbors, min_dist=min_dist, pca_pcs=pca_pcs
     )
     # -----
-    # Predict left-out timepoints
-    print("Predict...")
+    # Augment removed timepoints
+    print("Augment...")
     train_data = [torch.FloatTensor(traj_data[i]) for i in use_tps]
     train_tps = torch.FloatTensor(use_tps)
     pred_tps = torch.FloatTensor([
@@ -99,17 +100,19 @@ def recoverTraj(traj_data):
         7,
         8, 8.1, 8.25, 8.35, 8.5, 8.6, 8.75, 8.85,
         9,
-        10,
-        11
+        10, 10.1, 10.25, 10.35, 10.5, 10.6, 10.75, 10.85,
+        11, 11.1, 11.25, 11.35, 11.5, 11.6, 11.75, 11.85,
     ])
     latent_ode_model, all_recon_obs = predictLeaveout(train_data, train_tps, pred_tps, n_sim_cells=500)
+    # -----
+    # Predictions
     all_recon_obs = [all_recon_obs[:, t, :] for t in range(all_recon_obs.shape[1])]
     pred_umap_traj, pred_umap_model, pred_pca_model = umapWithPCA(
         np.concatenate(all_recon_obs, axis=0), n_neighbors=n_neighbors, min_dist=min_dist, pca_pcs=pca_pcs
     )
     # -----
-    res_filename = "../res/downstream_analysis/recover_traj/zebrafish-res-four_interpolation.npy"
-    state_filename = "../res/downstream_analysis/recover_traj/zebrafish-latent_ODE_OT-state_dict-four_interpolation.pt"
+    res_filename = "../res/downstream_analysis/recover_traj/zebrafish-res-remove_recovery.npy"
+    state_filename = "../res/downstream_analysis/recover_traj/zebrafish-latent_ODE_OT-state_dict-remove_recovery.pt"
     print("Saving to {}".format(res_filename))
     np.save(
         res_filename,
@@ -137,7 +140,7 @@ def recoverTraj(traj_data):
 
 
 def computeEmbedding():
-    res_filename = "../res/downstream_analysis/recover_traj/zebrafish-res-four_interpolation.npy"
+    res_filename = "../res/downstream_analysis/recover_traj/zebrafish-res-remove_recovery.npy"
     # -----
     res = np.load(res_filename, allow_pickle=True).item()
     traj_data = res["true"]
@@ -171,7 +174,7 @@ def computeEmbedding():
     aug_umap_traj = all_umap_model.transform(all_pca_model.transform(np.concatenate(aug_traj_data, axis=0)))
     # -----
     np.save(
-        "../res/downstream_analysis/recover_traj/zebrafish-res-embedding-neighbor{}-min_dist{:.2f}-pcs{}-project_to_all-four_interpolation.npy".format(n_neighbors, min_dist, pca_pcs),
+        "../res/downstream_analysis/recover_traj/zebrafish-res-embedding-neighbor{}-min_dist{:.2f}-pcs{}-project_to_all-remove_recovery.npy".format(n_neighbors, min_dist, pca_pcs),
         {
             "use_tps": use_tps,
             "pred_tps": pred_tps,
@@ -195,7 +198,7 @@ def visTraj():
     n_neighbors = 50
     min_dist = 0.25
     pca_pcs = 50
-    res_filename = "../res/downstream_analysis/recover_traj/zebrafish-res-embedding-neighbor{}-min_dist{:.2f}-pcs{}-project_to_all-four_interpolation.npy".format(n_neighbors, min_dist, pca_pcs)
+    res_filename = "../res/downstream_analysis/recover_traj/zebrafish-res-embedding-neighbor{}-min_dist{:.2f}-pcs{}-project_to_all-remove_recovery.npy".format(n_neighbors, min_dist, pca_pcs)
     res_dict = np.load(res_filename, allow_pickle=True).item()
     use_tps = res_dict["use_tps"]
     all_cell_tps = res_dict["all_cell_tps"]
@@ -253,7 +256,7 @@ def visTraj():
     aug_edge = np.asarray(np.where(aug_conn != 0)).T
 
     np.save(
-        "../res/downstream_analysis/recover_traj/zebrafish-PAGA_graph-four_interpolation.npy",
+        "../res/downstream_analysis/recover_traj/zebrafish-PAGA_graph-remove_recovery.npy",
         {
             "all_conn": all_conn,
             "all_node_pos": all_node_pos,
@@ -320,16 +323,39 @@ def visTraj():
         ax_list[-1].scatter([], [], label=t, color=color_list[t], s=30, alpha=1.0)
     ax_list[-1].legend(loc="center left", bbox_to_anchor=(1.0, 0.5), title="TPs", title_fontsize=14, fontsize=11)
     plt.tight_layout()
-    plt.savefig("../res/figs/zebrafish_recover_traj-four_interpolation.png", dpi=600)
+    plt.savefig("../res/figs/zebrafish_recover_traj-remove_recovery.png", dpi=600)
     plt.show()
 
+# ======================================================
+
+from netrd.distance import IpsenMikhailov
+import networkx as ntx
+def compareGrpahSim():
+    res = np.load(
+        "../res/downstream_analysis/recover_traj/zebrafish-PAGA_graph-remove_recovery.npy",
+        allow_pickle=True
+    ).item()
+    all_conn = res["all_conn"]
+    use_conn = res["use_conn"]
+    aug_conn = res["aug_conn"]
+    # -----
+    all_graph = ntx.from_numpy_matrix(all_conn)
+    use_graph = ntx.from_numpy_matrix(use_conn)
+    aug_graph = ntx.from_numpy_matrix(aug_conn)
+    dist_func = IpsenMikhailov()
+    print("Compute for removal...")
+    all_use_dist = dist_func.dist(all_graph, use_graph)
+    print("Compute for prediction...")
+    all_aug_dist = dist_func.dist(all_graph, aug_graph)
+    print("All-Removal IM dist = {}".format(all_use_dist))
+    print("All-Pred IM dist = {}".format(all_aug_dist))
 
 
 if __name__ == '__main__':
     print("=" * 70)
     data_name = "zebrafish"
     print("[ {} ]".format(data_name).center(60))
-    split_type = "four_interpolation"
+    split_type = "remove_recovery"
     print("Split type: {}".format(split_type))
     ann_data, cell_tps, cell_types, n_genes, n_tps = loadSCData(data_name, split_type)
     train_tps, test_tps = list(range(n_tps)), []

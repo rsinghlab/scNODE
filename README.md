@@ -1,13 +1,11 @@
 # scNODE: Generative Model for Temporal Single Cell Transcriptomic Data Prediction
 
-scNODE is a generative model that simulates and predicts realistic *in silico* single-cell gene expressions at any timepoint. scNODE integrates the idea of variational autoencoder (VAE) and neural ordinary differential equation (ODE) to model cell developmental landscapes on the non-linear manifold. scNODE is scalable to large-scale datasets.
+scNODE is a generative model that simulates and predicts realistic *in silico* single-cell gene expressions at any timepoint. scNODE integrates the idea of variational autoencoder (VAE) and neural ordinary differential equation (ODE) to model cell developmental landscapes on the non-linear manifold. scNODE is scalable to large-scale datasets. [*Preprint*](https://www.biorxiv.org/content/10.1101/2023.11.22.568346v1) is available.
 
 ![scNODE model overview](https://github.com/rsinghlab/scNODE/blob/main/model_illustration.jpg?raw=true)
 
 **If you have questions or find any problems with our codes, feel free to submit issues or send emails to jiaqi_zhang2@brown.edu or other corresponding authors.**
-
-
-
+ 
 ## Requirements
 
 Our codes have been tested in Python 3.7. Required packages are listed in [./installation](./installation).

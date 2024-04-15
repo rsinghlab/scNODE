@@ -3,6 +3,9 @@ Description:
     Prepare data for PRESCIENT model.
     Codes are adopted from PRESCIENT source codes.
 
+Author:
+    Jiaqi Zhang <jiaqi_zhang2@brown.edu>
+
 Reference:
     https://github.com/gifford-lab/prescient/blob/master/prescient/commands/process_data.py
 '''

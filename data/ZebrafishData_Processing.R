@@ -1,4 +1,4 @@
-# Description: Extract highly variable genes of zebrafish_embryonic embryonic scRNA-seq data.
+# Description: Extract highly variable genes of zebrafish embryonic (ZB) scRNA-seq data.
 # Author: Jiaqi Zhang <jiaqi_zhang2@brown.edu>
 # Reference:
 #   https://www.science.org/doi/10.1126/science.aar3131
@@ -17,30 +17,18 @@ meta_df <- data_obj@meta
 print(sprintf("Data shape (gene x cell): %d x %d", dim(data_count)[1], dim(data_count)[2]))
 # -----
 # Split data by traing and testing sets
-split_type <- "first_five" # interpolation, forecasting, three_forecasting, three_interpolation, all, two_forecasting, first_five
+split_type <- "remove_recovery" # two_forecasting, three_interpolation, remove_recovery
 cell_tp <- meta_df$stage.nice
 unique_tp <- unique(cell_tp)
-if (split_type == "interpolation"){
-  train_tps <- c(1, 2, 3, 4, 5, 6, 9, 10)
-  test_tps <- c(7, 8, 11, 12)
-} else if (split_type == "forecasting"){
-  train_tps <- c(1, 2, 3, 4, 5, 6)
-  test_tps <- c(7, 8, 9, 10, 11, 12)
-} else if (split_type == "three_forecasting"){
-  train_tps <- c(1, 2, 3, 4, 5, 6, 7, 8, 9)
-  test_tps <- c(10, 11, 12)
-} else if (split_type == "three_interpolation"){
+if (split_type == "three_interpolation"){ # easy
   train_tps <- c(1, 2, 3, 4, 6, 8, 10, 11, 12)
   test_tps <- c(5, 7, 9)
-} else if (split_type == "all"){
-  train_tps <- c(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12)
-  test_tps <- c()
-} else if (split_type == "two_forecasting"){
+} else if (split_type == "two_forecasting"){ # medium
   train_tps <- c(1, 2, 3, 4, 5, 6, 7, 8, 9, 10)
   test_tps <- c(11, 12)
-} else if (split_type == "first_five"){
-  train_tps <- c(1, 2, 3, 4, 5)
-  test_tps <- c(6, 7, 8, 9, 10, 11, 12)
+} else if (split_type == "remove_recovery"){ # hard
+  train_tps <- c(1, 2, 4, 6, 8, 10)
+  test_tps <- c(3, 5, 7, 9, 11, 12)
 } else {
   stop(sprintf("Unknown split type %s!", split_type))
 }

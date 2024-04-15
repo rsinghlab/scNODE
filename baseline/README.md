@@ -1,6 +1,6 @@
 # baseline
 
-Codes for all baseline models: PRESCIENT, WOT, TrajectoryNet, and Dummy.
+Codes for all baseline models: PRESCIENT and MIOFlow.
 We use source codes available on GitHub to run baseline models.
 
 ## PRESCIENT
@@ -9,18 +9,7 @@ We constructed a wrapper ([./prescient_model/running.py](./prescient_model/runni
 PRESCIENT codes are available at [here](https://github.com/gifford-lab/prescient).
 
 
-## WOT
+## MIOFlow
 
-We constructed a wrapper ([./wot_model/running.py](./wot_model/running.py)) to use WOT in our benchmark.
-WOT codes are available at [here](https://github.com/broadinstitute/wot).
-
-
-## TrajectoryNet
-
-We constructed a wrapper ([./TrajectoryNet_model/running.py](./TrajectoryNet_model/running.py)) to use WOT in our benchmark.
-TrajectoryNet codes are available at [here](https://github.com/KrishnaswamyLab/TrajectoryNet).
-
-
-## Dummy
-
-We implement dummy model in [./dummy_model.py](./dummy_model.py).
+We constructed a wrapper ([./MIOFlow_model_revised/running.py](./MIOFlow_model_revised/running.py)) to use MIOFlow in our benchmark.
+MIOFlow original codes are available at [here](https://github.com/KrishnaswamyLab/MIOFlow/tree/main).

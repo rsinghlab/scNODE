@@ -13,7 +13,6 @@ import itertools
 from model.layer import LinearNet, LinearVAENet
 from model.diff_solver import ODE
 from model.dynamic_model import scNODE
-from baseline.dummy_model import DummyModel
 from optim.loss_func import SinkhornLoss, MSELoss
 from benchmark.BenchmarkUtils import sampleGaussian
 
@@ -67,7 +66,7 @@ def constructscNODEModel(
 
 def scNODETrainWithPreTrain(
         train_data, train_tps, latent_ode_model, latent_coeff, epochs,
-        iters, batch_size, lr, pretrain_iters=200, pretrain_lr=1e-3
+        iters, batch_size, lr, pretrain_iters=200, pretrain_lr=1e-3, kl_coeff=0.0
 ):
     '''
     Train scNODE model.
@@ -105,8 +104,12 @@ def scNODETrainWithPreTrain(
             latent_mu, latent_std = latent_encoder(all_train_data)
             latent_sample = sampleGaussian(latent_mu, latent_std)
             recon_obs = obs_decoder(latent_sample)
+            # MSE reconstruction loss
             dim_reduction_loss = MSELoss(all_train_data, recon_obs)
-            vae_loss = dim_reduction_loss
+            # KL div between latent dist and N(0, 1)
+            kl_div = (latent_std**2 + latent_mu**2 - 2*torch.log(latent_std + 1e-5)).mean()
+            kl_div = kl_div * kl_coeff
+            vae_loss = dim_reduction_loss + kl_div
             # Backward
             dim_reduction_pbar.set_postfix({"Loss": "{:.3f}".format(vae_loss)})
             dim_reduction_loss_list.append(vae_loss.item())
@@ -147,16 +150,16 @@ def scNODETrainWithPreTrain(
             # -----
             # OT loss between true and reconstructed cell sets at each time point
             # Note: we compare the predicted batch with 200 randomly picked true cells, in order to save computational
-            # time. With sufficient number of training iterations, all true cells can be used.
+            #       time. With sufficient number of training iterations, all true cells can be used.
             ot_loss = SinkhornLoss(train_data, recon_obs, blur=blur, scaling=scaling, batch_size=200)
-            # Difference between encoder latent and DE latent
-            latent_diff = SinkhornLoss(encoder_latent_seq, latent_seq, blur=blur, scaling=scaling, batch_size=None)
-            loss = ot_loss + latent_coeff * latent_diff
+            # Dynamic regularization: Difference between encoder latent and DE latent
+            dynamic_reg = SinkhornLoss(encoder_latent_seq, latent_seq, blur=blur, scaling=scaling, batch_size=None)
+            loss = ot_loss + latent_coeff * dynamic_reg
             epoch_pbar.set_postfix(
-                {"Loss": "{:.3f} | OT={:.3f}, Latent_Diff={:.3f}".format(loss, ot_loss, latent_diff)})
+                {"Loss": "{:.3f} | OT={:.3f}, Dynamic_Reg={:.3f}".format(loss, ot_loss, dynamic_reg)})
             loss.backward()
             optimizer.step()
-            loss_list.append([loss.item(), ot_loss.item(), latent_diff.item()])
+            loss_list.append([loss.item(), ot_loss.item(), dynamic_reg.item()])
     # latent_ODE model prediction
     latent_ode_model.eval()
     recon_obs, first_latent_dist, _, latent_seq = latent_ode_model(train_data, train_tps, batch_size=None)
@@ -179,23 +182,3 @@ def scNODEPredict(latent_ode_model, first_tp_data, tps, n_cells):
     all_pred_data = all_pred_data.detach().numpy()  # (# cells, # tps, # genes)
     return all_pred_data
 
-
-# =============================================
-
-def constructDummyModel():
-    '''
-    Construct the dummy model.
-    '''
-    dummy_model = DummyModel()
-    return dummy_model
-
-
-def dummySimulate(dummy_model, all_traj_data, train_tps, know_all=False):
-    '''
-    Dummy model predicts expressions.
-    '''
-    # Make predictions
-    all_pred_data = dummy_model.predict(all_traj_data, train_tps, know_all=know_all) # (#tps, #cells, #genes)
-    all_pred_data[0] = all_traj_data[0]
-    all_pred_data = [each.detach().numpy() for each in all_pred_data]
-    return all_pred_data

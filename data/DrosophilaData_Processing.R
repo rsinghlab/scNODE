@@ -1,4 +1,4 @@
-# Description: Extract highly variable genes of drosophila scRNA-seq data.
+# Description: Extract highly variable genes of drosophila (DR) scRNA-seq data.
 # Author: Jiaqi Zhang <jiaqi_zhang2@brown.edu>
 # Reference:
 #   https://www.science.org/doi/10.1126/science.abn5800
@@ -53,24 +53,18 @@ if (file.exists("./data/single_cell/experimental/drosophila_embryonic/processed/
 }
 # -----
 # Split data by traing and testing sets
-split_type <- "first_five" # interpolation, forecasting, three_forecasting, three_interpolation
+split_type <- "remove_recovery" # three_forecasting, three_interpolation, remove_recovery
 cell_tp <- all_data_obj@meta.data$time
 unique_tp <- unique(cell_tp)
-if (split_type == "interpolation"){
-  train_tps <- c(1, 2, 3, 4, 5, 8, 9)
-  test_tps <- c(6, 7, 10, 11)
-} else if (split_type == "forecasting"){
-  train_tps <- c(1, 2, 3, 4, 5, 6)
-  test_tps <- c(7, 8, 9, 10, 11)
-} else if (split_type == "three_forecasting"){
+if (split_type == "three_forecasting"){ # medium
   train_tps <- c(1, 2, 3, 4, 5, 6, 7, 8)
   test_tps <- c(9, 10, 11)
-} else if (split_type == "three_interpolation"){
+} else if (split_type == "three_interpolation"){ # easy
   train_tps <- c(1, 2, 3, 4, 6, 8, 10, 11)
   test_tps <- c(5, 7, 9)
-} else if (split_type == "first_five"){
-  train_tps <- c(1, 2, 3, 4, 5)
-  test_tps <- c(6, 7, 8, 9, 10, 11)
+} else if (split_type == "remove_recovery"){ # hard
+  train_tps <- c(1, 2, 4, 6, 8)
+  test_tps <- c(3, 5, 7, 9, 10, 11)
 } else {
   stop(sprintf("Unknown split type %s!", split_type))
 }

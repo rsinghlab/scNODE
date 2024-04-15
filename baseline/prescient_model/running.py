@@ -1,19 +1,22 @@
 '''
 Description:
-    Wrapper for running PRESCIENT model in our benchmarks
+    Wrapper of running PRESCIENT model.
     Codes are adopted from PRESCIENT source codes.
 
-Reference:
-    https://github.com/gifford-lab/prescient/blob/master/prescient/commands/train_model.py
-'''
+Author:
+    Jiaqi Zhang <jiaqi_zhang2@brown.edu>
 
+Reference:
+    https://github.com/gifford-lab/prescient/blob/master/prescient/commands/process_data.py
+'''
 import torch
 import numpy as np
 import pandas as pd
 import pickle as pkl
 import sklearn
 import umap
-
+from time import strftime, localtime
+from types import SimpleNamespace
 import os
 import copy
 import argparse

@@ -26,9 +26,17 @@ timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
 
 # Load data
 print("=" * 70)
-data_name= "zebrafish" # zebrafish, mammalian, drosophila, wot, pancreatic, embryoid
+# Specify the dataset: zebrafish, drosophila, wot
+# Representing ZB, DR, SC, repectively
+data_name= "zebrafish" # zebrafish, drosophila, wot
 print("[ {} ]".format(data_name).center(60))
-split_type = "three_interpolation"  # three_interpolation, three_forecasting, one_interpolation, one_forecasting
+# Specify the type of prediction tasks: three_interpolation, two_forecasting, three_forecasting, remove_recovery
+# The tasks feasible for each dataset:
+#   zebrafish (ZB): three_interpolation, two_forecasting, remove_recovery
+#   drosophila (DR): three_interpolation, three_forecasting, remove_recovery
+#   wot (SC): three_interpolation, three_forecasting, remove_recovery
+# They denote easy, medium, and hard tasks respectively.
+split_type = "three_interpolation"
 print("Split type: {}".format(split_type))
 ann_data, cell_tps, cell_types, n_genes, n_tps = loadSCData(data_name, split_type)
 train_tps, test_tps = tpSplitInd(data_name, split_type)

@@ -79,7 +79,6 @@ def compareUMAPTestTime(
     _removeAllBorders(ax_list[0])
     # Plot pred data
     for m_idx, m in enumerate(model_list):
-        # ax_list[m_idx+1].set_title("{} \n miLISI={:.2f}".format(mdoel_name_dict[m], miLISI), fontsize=15)
         ax_list[m_idx+1].set_title(mdoel_name_dict[m], fontsize=15)
         ax_list[m_idx+1].scatter(true_umap_traj[:, 0], true_umap_traj[:, 1], c=gray_color, s=40, alpha=0.5)
         for t_idx, t in enumerate(test_tps):
@@ -97,160 +96,6 @@ def compareUMAPTestTime(
     # plt.savefig("{}/{}-{}-{}.png".format(save_dir, data_name, split_type, embed_name))
     plt.show()
 
-
-def plotMetricBar(metric_path, dataset_list, inter_model_list, extra_model_list, dataset_name_dict, mdoel_name_dict, save_dir):
-    inter_avg_ot = []
-    inter_std_ot = []
-    inter_avg_l2 = []
-    inter_std_l2 = []
-    extra_avg_ot = []
-    extra_std_ot = []
-    extra_avg_l2 = []
-    extra_std_l2 = []
-    for data_name in dataset_list:
-        # interpolation
-        if data_name in ["embryoid", "pancreatic"]:
-            inter_split = "one_interpolation"
-        if data_name in ["zebrafish", "mammalian", "drosophila", "WOT"]:
-            inter_split = "three_interpolation"
-        metric_res = np.load("{}/{}-{}-model_metrics.npy".format(metric_path, data_name, inter_split), allow_pickle=True).item()
-        tmp_ot = np.asarray([[metric_res[t][m]["global"]["ot"] if m in metric_res[t] else np.nan for m in inter_model_list] for t in metric_res])
-        tmp_l2 = np.asarray([[metric_res[t][m]["global"]["l2"] if m in metric_res[t] else np.nan for m in inter_model_list] for t in metric_res])
-        inter_avg_ot.append(np.nanmean(tmp_ot, axis=0))
-        inter_std_ot.append(np.nanstd(tmp_ot, axis=0))
-        inter_avg_l2.append(np.nanmean(tmp_l2, axis=0))
-        inter_std_l2.append(np.nanstd(tmp_l2, axis=0))
-        # extrapolation
-        if data_name in ["embryoid", "pancreatic"]:
-            extra_split = "one_forecasting"
-        if data_name in ["mammalian", "drosophila", "WOT"]:
-            extra_split = "three_forecasting"
-        if data_name in ["zebrafish"]:
-            extra_split = "two_forecasting"
-        metric_res = np.load("{}/{}-{}-model_metrics.npy".format(metric_path, data_name, extra_split), allow_pickle=True).item()
-        tmp_ot = np.asarray([[metric_res[t][m]["global"]["ot"] if m in metric_res[t] else np.nan for m in extra_model_list] for t in metric_res])
-        tmp_l2 = np.asarray([[metric_res[t][m]["global"]["l2"] if m in metric_res[t] else np.nan for m in extra_model_list] for t in metric_res])
-        extra_avg_ot.append(np.nanmean(tmp_ot, axis=0))
-        extra_std_ot.append(np.nanmean(tmp_ot, axis=0))
-        extra_avg_l2.append(np.nanmean(tmp_l2, axis=0))
-        extra_std_l2.append(np.nanstd(tmp_l2, axis=0))
-    # -----
-    inter_avg_ot = np.asarray(inter_avg_ot)
-    extra_avg_ot = np.asarray(extra_avg_ot)
-    color_list = Vivid_10.mpl_colors
-    fig, ax_list = plt.subplots(1, 2, figsize=(12, 4))
-    inter_width = 0.1
-    x_base = np.arange(len(dataset_list)) - inter_width*len(inter_model_list)
-    ax_list[0].set_title("Interpolation")
-    for i in range(len(inter_model_list)):
-        ax_list[0].bar(
-            x=x_base+i*inter_width,
-            height=inter_avg_ot[:, i],
-            width=inter_width,
-            align="edge",
-            color=model_colors_dict[inter_model_list[i]],
-            label=mdoel_name_dict[inter_model_list[i]],
-            edgecolor="k",
-            linewidth=0.2,
-        )
-        # ax_list[0].legend(fontsize=12)
-    ax_list[0].set_ylim(0.0, 600)
-    ax_list[0].set_yticks([0, 200, 400, 600])
-    ax_list[0].set_yticklabels(["0", "200", "400", r"$\geq$600"])
-    ax_list[0].set_xticks([])
-    ax_list[0].set_ylabel("Wasserstein")
-    ax_list[0].set_xlabel("Dataset")
-    ax_list[0].set_xticks(np.arange(len(dataset_list)) - inter_width * len(inter_model_list) / 2)
-    ax_list[0].set_xticklabels([dataset_name_dict[x] for x in dataset_list])
-    _removeTopRightBorders(ax_list[0])
-    extra_width = 0.2
-    x_base = np.arange(len(dataset_list)) - extra_width * len(extra_model_list)
-    ax_list[1].set_title("Extrapolation")
-    for i in range(len(extra_model_list)):
-        ax_list[1].bar(
-            x=x_base + i * extra_width,
-            height=extra_avg_ot[:, i],
-            width=extra_width,
-            align="edge",
-            color=model_colors_dict[extra_model_list[i]],
-            label=mdoel_name_dict[extra_model_list[i]],
-            edgecolor="k",
-            linewidth=0.2,
-        )
-        # ax_list[1].legend(fontsize=12)
-    ax_list[1].set_ylim(0.0, 800)
-    ax_list[1].set_yticks([0, 200, 400, 600, 800])
-    ax_list[1].set_yticklabels(["0", "200", "400", "600", r"$\geq$800"])
-    # ax_list[1].set_ylabel("Wasserstein")
-    _removeTopRightBorders(ax_list[1])
-    plt.xticks(np.arange(len(dataset_list)) - extra_width*len(extra_model_list)/2, [dataset_name_dict[x] for x in dataset_list])
-    plt.xlabel("Dataset")
-    # ax_list[0].legend(loc="upper left", bbox_to_anchor=(0.0, 1.1), title_fontsize=14, fontsize=10, ncol=3)
-    # ax_list[0].legend(loc="center left", bbox_to_anchor=(1.0, 0.5), fontsize=11)
-    plt.subplots_adjust(hspace=2.5)
-    plt.tight_layout()
-    # plt.savefig("{}/exp_metric_bar_hori.pdf".format(save_dir))
-    plt.show()
-    # -----
-    inter_avg_l2 = np.asarray(inter_avg_l2)
-    extra_avg_l2 = np.asarray(extra_avg_l2)
-    color_list = Vivid_10.mpl_colors
-    fig, ax_list = plt.subplots(1, 2, figsize=(12, 4))
-    inter_width = 0.1
-    x_base = np.arange(len(dataset_list)) - inter_width*len(inter_model_list)
-    ax_list[0].set_title("Interpolation")
-    for i in range(len(inter_model_list)):
-        bar1 = ax_list[0].bar(
-            x=x_base+i*inter_width,
-            height=inter_avg_l2[:, i],
-            width=inter_width,
-            align="edge",
-            color=model_colors_dict[inter_model_list[i]],
-            label=mdoel_name_dict[inter_model_list[i]],
-            edgecolor="k",
-            linewidth=0.2,
-        )
-        # ax_list[0].legend(fontsize=12)
-    ax_list[0].set_ylim(0.0, 50)
-    ax_list[0].set_yticks([0, 20, 40, 50])
-    ax_list[0].set_yticklabels(["0", "20", "40", r"$\geq$50"])
-    ax_list[0].set_xticks([])
-    ax_list[0].set_ylabel("L2")
-    ax_list[0].set_xlabel("Dataset")
-    _removeTopRightBorders(ax_list[0])
-    ax_list[0].set_xticks(np.arange(len(dataset_list)) - inter_width * len(inter_model_list) / 2)
-    ax_list[0].set_xticklabels([dataset_name_dict[x] for x in dataset_list])
-    plt.xlabel("Dataset")
-    extra_width = 0.2
-    x_base = np.arange(len(dataset_list)) - extra_width * len(extra_model_list)
-    ax_list[1].set_title("Extrapolation")
-    for i in range(len(extra_model_list)):
-        bar2 = ax_list[1].bar(
-            x=x_base + i * extra_width,
-            height=extra_avg_l2[:, i],
-            width=extra_width,
-            align="edge",
-            color=model_colors_dict[extra_model_list[i]],
-            label=mdoel_name_dict[extra_model_list[i]],
-            edgecolor="k",
-            linewidth=0.2,
-        )
-        # ax_list[1].legend(fontsize=12)
-    ax_list[1].set_ylim(0.0, 50)
-    ax_list[1].set_yticks([0, 20, 40, 50])
-    ax_list[1].set_yticklabels(["0", "20", "40", r"$\geq$50"])
-    _removeTopRightBorders(ax_list[1])
-    plt.xticks(np.arange(len(dataset_list)) - extra_width*len(extra_model_list)/2, [dataset_name_dict[x] for x in dataset_list])
-    plt.xlabel("Dataset")
-    handles, labels = ax_list[0].get_legend_handles_labels()
-    fig.legend(handles, labels, loc=(0.25, 1), fontsize=12, ncol=5)
-
-    plt.subplots_adjust(hspace=2.5)
-    plt.tight_layout()
-    # plt.savefig("{}/exp_l2_bar_hori.pdf".format(save_dir))
-    plt.show()
-
-
 # ======================================
 
 
@@ -261,17 +106,7 @@ def _plotTable(df_data):
     ))
 
 
-def printMetric(model_l2, model_ot, model_list, column_names):
-    print("\n" * 2)
-    metric_df = pd.DataFrame(
-        data=model_l2,
-        index=pd.MultiIndex.from_tuples([
-            ("L2", m) for m in model_list
-        ], names=("Metric", "Model")),
-        columns=pd.MultiIndex.from_tuples(column_names, names=("Type", "TP"))
-    )
-    _plotTable(metric_df)
-
+def printMetric(model_ot, model_list, column_names):
     print("\n" * 2)
     metric_df = pd.DataFrame(
         data=model_ot,

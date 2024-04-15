@@ -15,7 +15,8 @@ ACT_FUNC_MAP = {
     "sigmoid": nn.Sigmoid(),
     "tanh": nn.Tanh(),
     "softplus": nn.Softplus(),
-    "relu": nn.ReLU()
+    "relu": nn.ReLU(),
+    "leakyrelu": nn.LeakyReLU(),
 }
 
 # ===========================================
@@ -45,7 +46,7 @@ class LinearNet(nn.Module):
                 layer_list.extend([nn.Linear(latent_size_list[i], latent_size_list[i + 1]), act_func])
             layer_list.extend([nn.Linear(latent_size_list[-1], output_dim), act_func])
         else:
-            layer_list.extend([nn.Linear(input_dim, output_dim), act_func]) # NOTE: no activation in previous exps
+            layer_list.extend([nn.Linear(input_dim, output_dim)])
         self.net = nn.Sequential(*layer_list)
         self.input_dim = input_dim
         self.output_dim = output_dim
@@ -92,7 +93,7 @@ class LinearVAENet(nn.Module):
                 layer_list.extend([nn.Linear(latent_size_list[i], latent_size_list[i + 1]), act_func])
             layer_list.extend([nn.Linear(latent_size_list[-1], output_dim), act_func])
         else:
-            layer_list.extend([nn.Linear(input_dim, output_dim), act_func]) # NOTE: no activation in previous exps
+            layer_list.extend([nn.Linear(input_dim, output_dim)])
         self.net = nn.Sequential(*layer_list)
         self.mu_layer = nn.Linear(output_dim, output_dim)
         self.var_layer = nn.Linear(output_dim, output_dim)

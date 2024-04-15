@@ -19,18 +19,16 @@ from optim.evaluation import globalEvaluation
 # ======================================================
 # Load data and pre-processing
 print("=" * 70)
-# Specify the dataset: zebrafish, mammalian, drosophila, wot, pancreatic, embryoid
-# Representing ZB, MB, DR, SC, MP, and EB, respectively
+# Specify the dataset: zebrafish, drosophila, wot
+# Representing ZB, DR, SC, repectively
 data_name= "zebrafish"
 print("[ {} ]".format(data_name).center(60))
-# Specify the type of prediction tasks: three_interpolation, two_forecasting, three_forecasting, one_interpolation, one_forecasting
+# Specify the type of prediction tasks: three_interpolation, two_forecasting, three_forecasting, remove_recovery
 # The tasks feasible for each dataset:
-#   zebrafish (ZB): three_interpolation, two_forecasting
-#   mammalian (MB): three_interpolation, three_forecasting
-#   drosophila (DR): three_interpolation, three_forecasting
-#   wot (SC): three_interpolation, three_forecasting
-#   pancreatic (MP): one_interpolation, one_forecasting
-#   embryoid (EB): one_interpolation, one_forecasting
+#   zebrafish (ZB): three_interpolation, two_forecasting, remove_recovery
+#   drosophila (DR): three_interpolation, three_forecasting, remove_recovery
+#   wot (SC): three_interpolation, three_forecasting, remove_recovery
+# They denote easy, medium, and hard tasks respectively.
 split_type = "three_interpolation"
 print("Split type: {}".format(split_type))
 ann_data, cell_tps, cell_types, n_genes, n_tps = loadSCData(data_name, split_type)
@@ -88,7 +86,7 @@ plt.subplot(3, 1, 2)
 plt.title("OT Term")
 plt.plot([each[1] for each in loss_list])
 plt.subplot(3, 1, 3)
-plt.title("Latent Difference")
+plt.title("Dynamic Reg")
 plt.plot([each[2] for each in loss_list])
 plt.xlabel("Dynamic Learning Iter")
 plt.show()
@@ -104,19 +102,6 @@ pred_umap_traj = umap_model.transform(pca_model.transform(np.concatenate(reorder
 plotPredAllTime(true_umap_traj, pred_umap_traj, true_cell_tps, pred_cell_tps)
 plotPredTestTime(true_umap_traj, pred_umap_traj, true_cell_tps, pred_cell_tps, test_tps.detach().numpy())
 
-# Visualization - vector field of latent space
-print("Visualize latent space...")
-latent_seq, next_seq, drift_seq = computeDrift(traj_data, latent_ode_model)
-drift_magnitude = [np.linalg.norm(each, axis=1) for each in drift_seq]
-umap_latent_data, umap_next_data, umap_model, latent_tp_list = computeLatentEmbedding(
-    latent_seq, next_seq, n_neighbors = 50, min_dist = 0.1 # 0.25
-)
-umap_scatter_data = umap_latent_data
-color_list = linearSegmentCMap(n_tps, "viridis")
-plotStream(umap_scatter_data, umap_latent_data, umap_next_data, color_list, num_sep=200, n_neighbors=20)
-if cell_types is not None:
-    plotStreamByCellType(umap_scatter_data, umap_latent_data, umap_next_data, traj_cell_types, num_sep=200, n_neighbors=5)
-
 # Compute evaluation metrics
 print("Compute metrics...")
 test_tps_list = [int(t) for t in test_tps]
@@ -130,8 +115,8 @@ for t in test_tps_list:
 # # ======================================================
 # # Save results
 # save_dir = "../res/single_cell/experimental/{}".format(data_name)
-# res_filename = "{}/{}-{}-latent_ODE_OT_pretrain-res.npy".format(save_dir, data_name, split_type)
-# state_filename = "{}/{}-{}-latent_ODE_OT_pretrain-state_dict.pt".format(save_dir, data_name, split_type)
+# res_filename = "{}/{}-{}-scNODE-res.npy".format(save_dir, data_name, split_type)
+# state_filename = "{}/{}-{}-scNODE-state_dict.pt".format(save_dir, data_name, split_type)
 # print("Saving to {}".format(res_filename))
 # np.save(
 #     res_filename,

@@ -176,12 +176,5 @@ dmypy.json
 # Cython debug symbols
 cython_debug/
 
-
-ECCB_figs/
-ECCB_figs/figs
-model_validation/
-new_data/
-res/
-
 ###############################################################
 

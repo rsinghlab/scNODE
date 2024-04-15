@@ -1,6 +1,6 @@
 # data
 
-Pre-processing of three scRNA-seq datasets. The raw and pre-processed data can be downloaded from [here](https://doi.org/10.6084/m9.figshare.25601610.v1).
+Pre-processing of three scRNA-seq datasets. The raw and pre-processed data can be downloaded from [here](https://doi.org/10.6084/m9.figshare.25601610.v1) and put in this directory.
 
 | ID | Dataset            | Species      | # Cells | # Timepoints | Source                                                                                              |
 |----|--------------------|--------------|---------|--------------|-----------------------------------------------------------------------------------------------------|

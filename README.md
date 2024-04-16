@@ -50,7 +50,3 @@ An example of using scNODE is shown in [./benchmark/1_SingleCell_scNODE.py](./be
 
 Please report any bugs, problems, suggestions, or requests as a [Github issue](https://github.com/rsinghlab/scNODE/issues)
 
-
-*Update History*
-
-- 04/15/2024: 

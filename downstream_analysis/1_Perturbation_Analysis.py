@@ -618,13 +618,13 @@ if __name__ == '__main__':
         allow_pickle=True
     ).item()
     latent_seq = data_res["latent_seq"]
-    next_seq = data_res["next_seq"]
-    drift_seq = data_res["drift_seq"]
-    drift_magnitude = data_res["drift_magnitude"]
     umap_latent_data = data_res["umap_latent_data"]
-    umap_next_data = data_res["umap_next_data"]
     umap_model = data_res["umap_model"]  # Note: The UMAP is for the model latent space
-    latent_tp_list = data_res["latent_tp_list"]
+    # next_seq = data_res["next_seq"]
+    # drift_seq = data_res["drift_seq"]
+    # drift_magnitude = data_res["drift_magnitude"]
+    # umap_next_data = data_res["umap_next_data"]
+    # latent_tp_list = data_res["latent_tp_list"]
 
     # =====================================================
     # Least action path
